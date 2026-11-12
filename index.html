@@ -46,7 +46,7 @@ body{background:var(--paper);color:var(--ink);font-family:var(--f-ui);font-size:
 .label{font-size:11px;font-weight:700;color:var(--accent-dark);text-transform:uppercase;letter-spacing:.05em;margin:0}
 .modus{font-size:12px;color:var(--muted)}
 
-.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 .tegel{display:flex;flex-direction:column;gap:12px;padding:22px 20px 18px;background:var(--card);border:1px solid var(--line);
   border-radius:20px;box-shadow:var(--shadow);color:var(--ink);text-decoration:none;min-width:0;
   transition:transform .15s,box-shadow .15s,border-color .15s}
@@ -82,7 +82,7 @@ body.mobiel.toon-meer .kantoor{display:flex}
 @media (max-width:760px){ body:not(.mobiel) .grid{grid-template-columns:minmax(0,1fr)} }
 @media (prefers-reduced-motion:reduce){ .tegel{transition:none} .tegel:hover{transform:none} }
 </style>
-<style>body{margin:0}</style>
+<style>body{margin:0}[hidden]{display:none!important}</style>
 </head>
 <body>
 
@@ -129,6 +129,16 @@ body.mobiel.toon-meer .kantoor{display:flex}
       <span class="voet"><span class="chip">Mobiel en pc</span><span class="open">Openen <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg></span></span>
     </a>
 
+    <a class="tegel" id="t-materiaal" href="materiaal/">
+      <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 3 7.5 12 12l9-4.5L12 3Z"/><path d="M3 12l9 4.5 9-4.5"/><path d="M3 16.5 12 21l9-4.5"/></svg></span>
+      <div class="tekst">
+        <h2>Materiaal</h2>
+        <p>Pakken vloer, ondervloer, lijm, olie of lak en plinten: wat moet je bestellen.</p>
+      </div>
+      <span class="pijl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
+      <span class="voet"><span class="chip">Mobiel en pc</span><span class="open">Openen <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg></span></span>
+    </a>
+
     <a class="tegel kantoor" href="https://claude.ai/artifact/XBh9x2XMiwDqL3JqzB1H26" target="_blank" rel="noopener">
       <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/><path d="M19 4l-3 3"/></svg></span>
       <div class="tekst">
@@ -141,7 +151,7 @@ body.mobiel.toon-meer .kantoor{display:flex}
   </div>
 
   <button class="meer-knop" id="meer" aria-expanded="false">Meer apps tonen (kantoor)</button>
-  <p class="noot">Plattegrond en Winstmarge werken alleen als je in Claude bent ingelogd. De opmeet-app heeft een eigen inlog.</p>
+  <p class="noot">De materiaalcalculator werkt overal. Plattegrond en Winstmarge werken alleen als je in Claude bent ingelogd. De opmeet-app heeft een eigen inlog.</p>
 </main>
 
 <script>
