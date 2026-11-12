@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Materiaalcalculator PSG</title>
+<style>
+/* Layout: donkere kopbalk zoals de kantoortool; links invoer (ruimtes + vloer), rechts een vaste bestellijst; op telefoon onder elkaar */
+:root{
+  --paper:#F3F5F7; --card:#FFFFFF; --line:#E7EBEF; --ink:#1E2530; --muted:#6B7584; --soft:#F2F5F7;
+  --accent:#0F766E; --accent-dark:#0B564F; --accent-tint:#E3F4F1; --accent-ink:#FFFFFF;
+  --bar:#151C28; --bar-ink:#EAF1F0; --bar-muted:#9AA6B5;
+  --warn:#9A6408; --warn-bg:#FBF1DC; --bad:#C23B3B;
+  --shadow:0 1px 6px rgba(21,28,40,.05);
+  --f-ui:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  --f-num:ui-monospace,"SF Mono","SFMono-Regular",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --paper:#11161E; --card:#19202B; --line:#28313E; --ink:#E6EBF1; --muted:#97A2B1; --soft:#1E2631;
+  --accent:#3FB5A8; --accent-dark:#7FD3C8; --accent-tint:#173430; --accent-ink:#0A1F1C;
+  --bar:#0A0F16; --bar-ink:#EAF1F0; --bar-muted:#8793A3;
+  --warn:#E6B85C; --warn-bg:#2E2617; --bad:#EE7E70;
+  --shadow:0 1px 6px rgba(0,0,0,.25); color-scheme:dark }}
+:root[data-theme="dark"]{
+  --paper:#11161E; --card:#19202B; --line:#28313E; --ink:#E6EBF1; --muted:#97A2B1; --soft:#1E2631;
+  --accent:#3FB5A8; --accent-dark:#7FD3C8; --accent-tint:#173430; --accent-ink:#0A1F1C;
+  --bar:#0A0F16; --bar-ink:#EAF1F0; --bar-muted:#8793A3;
+  --warn:#E6B85C; --warn-bg:#2E2617; --bad:#EE7E70;
+  --shadow:0 1px 6px rgba(0,0,0,.25); color-scheme:dark }
+
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-ui);font-size:15px;line-height:1.45}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+
+.band{background:var(--bar);color:var(--bar-ink);border-radius:0 0 18px 18px;box-shadow:0 6px 18px rgba(21,28,40,.2)}
+.in{max-width:1100px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.band .in{padding-block:18px;display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px}
+.brand{margin-right:auto;min-width:0}
+.brand h1{margin:0;font-size:19px;font-weight:700}
+.brand p{margin:2px 0 0;font-size:13px;color:var(--bar-muted)}
+.bar-btn{border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:var(--bar-ink);border-radius:9px;padding:7px 12px;font-size:13px;font-weight:600;cursor:pointer}
+.bar-btn:hover{background:rgba(255,255,255,.16)}
+
+.main{padding-block:20px 40px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:16px;align-items:start}
+.col{display:flex;flex-direction:column;gap:14px;min-width:0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.label{font-size:11px;font-weight:700;color:var(--accent-dark);text-transform:uppercase;letter-spacing:.05em;margin:0}
+.kop{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.hint{font-size:12.5px;color:var(--muted);margin:0}
+
+input,select{width:100%;height:38px;border:1px solid #D9DEE4;border:1px solid var(--line);border-radius:8px;background:var(--card);padding:7px 10px;min-width:0}
+input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-tint);outline:none}
+input.num{text-align:right}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field>span{font-size:12px;color:var(--muted)}
+.fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.fields.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+
+.btn{border:1px solid var(--line);background:var(--card);border-radius:9px;padding:8px 13px;font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{background:var(--accent-dark);border-color:var(--accent-dark)}
+
+/* Ruimtes */
+.rooms{display:flex;flex-direction:column;gap:8px}
+.rhead,.room{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr) 34px;gap:8px;align-items:center}
+.rhead{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+.rhead span:nth-child(2),.rhead span:nth-child(3){text-align:right}
+.x{border:0;background:transparent;color:var(--muted);font-size:20px;line-height:1;height:34px;border-radius:8px;cursor:pointer}
+.x:hover{color:var(--bad);background:var(--soft)}
+.rfoot{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr) 34px;gap:8px;border-top:2px solid var(--ink);padding-top:8px;font-weight:700}
+.rfoot span{text-align:right}
+.rfoot span:first-child{text-align:left}
+
+/* Keuzeknoppen */
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{border:1.5px solid var(--line);background:var(--card);border-radius:10px;padding:8px 12px;font-size:14px;cursor:pointer;color:var(--muted)}
+.chips button:hover{border-color:var(--accent);color:var(--ink)}
+.chips button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.chips button small{font-family:var(--f-num);font-size:11.5px;opacity:.8;margin-left:4px}
+
+.verlies{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.verlies .field{width:120px}
+.badge{font-size:12px;font-weight:600;border-radius:999px;padding:3px 9px;background:var(--soft);color:var(--muted)}
+.badge.af{background:var(--warn-bg);color:var(--warn)}
+.linkbtn{border:0;background:none;padding:0;color:var(--accent);font-weight:600;font-size:13px;cursor:pointer}
+.linkbtn:hover{text-decoration:underline}
+.check{display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer}
+.check input{width:18px;height:18px;accent-color:var(--accent)}
+
+/* Resultaat */
+.result{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px)}
+.totaal{display:flex;flex-direction:column;gap:2px}
+.totaal .v{font-family:var(--f-num);font-variant-numeric:tabular-nums;font-size:34px;font-weight:600;color:var(--accent-dark);line-height:1.1;letter-spacing:-.02em}
+.totaal .s{font-size:13px;color:var(--muted)}
+.lijst{display:flex;flex-direction:column;border-top:1px solid var(--line)}
+.regel{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;padding:9px 0;border-bottom:1px solid var(--line)}
+.regel b{font-weight:600}
+.regel .q{font-family:var(--f-num);font-variant-numeric:tabular-nums;font-weight:600;text-align:right;white-space:nowrap}
+.regel .d{grid-column:1 / -1;font-size:12.5px;color:var(--muted)}
+.waarsch{display:flex;flex-direction:column;gap:6px}
+.waarsch div{font-size:13px;background:var(--warn-bg);color:var(--warn);border-radius:8px;padding:8px 10px}
+.toast{font-size:13px;font-weight:600;color:var(--accent)}
+
+/* Instellingen */
+.inst{display:flex;flex-direction:column;gap:14px}
+.inst h3{margin:0;font-size:13px;font-weight:700}
+.inst .fields{grid-template-columns:repeat(4,minmax(0,1fr))}
+
+@media (max-width:900px){ .grid{grid-template-columns:minmax(0,1fr)} .result{position:static} }
+@media (max-width:560px){
+  .fields,.inst .fields{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .rhead,.room,.rfoot{grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) minmax(0,1fr) 30px;gap:6px}
+}
+</style>
+<style>body{margin:0}[hidden]{display:none!important}</style>
+</head>
+<body>
+
+<header class="band">
+  <div class="in">
+    <div class="brand">
+      <h1>Materiaalcalculator</h1>
+      <p>Parket Specialist Gouda · hoeveel bestellen</p>
+    </div>
+    <a class="bar-btn" href="../" style="text-decoration:none">← Kantoor</a>
+    <button class="bar-btn" id="nieuw">Nieuwe berekening</button>
+  </div>
+</header>
+
+<main class="main">
+  <div class="in grid">
+    <div class="col">
+
+      <section class="card" aria-labelledby="l-ruimtes">
+        <div class="kop">
+          <p class="label" id="l-ruimtes">Ruimtes</p>
+          <span class="hint" id="voorbeeld-hint">Voorbeeldgegevens · pas aan of begin opnieuw</span>
+        </div>
+        <div class="rhead"><span>Ruimte</span><span>m²</span><span>Omtrek m</span><span></span></div>
+        <div class="rooms" id="rooms"></div>
+        <div class="rfoot"><span>Totaal</span><span class="num" id="t-m2">0</span><span class="num" id="t-om">0</span><span></span></div>
+        <div><button class="btn" id="add-room">+ Ruimte toevoegen</button></div>
+      </section>
+
+      <section class="card" aria-labelledby="l-vloer">
+        <p class="label" id="l-vloer">Vloer</p>
+        <div class="field"><span>Type vloer</span>
+          <div class="chips" id="c-type" role="group" aria-label="Type vloer"></div>
+        </div>
+        <div class="field"><span>Legpatroon</span>
+          <div class="chips" id="c-patroon" role="group" aria-label="Legpatroon"></div>
+        </div>
+        <div class="field"><span>Ondervloer</span>
+          <div class="chips" id="c-onder" role="group" aria-label="Ondervloer"></div>
+        </div>
+        <div class="fields" id="onder-rij">
+          <label class="field" for="f-onder-pak"><span id="onder-pak-label">m² per pak ondervloer</span><input id="f-onder-pak" class="num" inputmode="decimal" placeholder="0,0"></label>
+        </div>
+        <div class="verlies">
+          <label class="field" for="f-verlies"><span>Snijverlies %</span><input id="f-verlies" class="num" inputmode="decimal"></label>
+          <span class="badge" id="verlies-badge">Standaard</span>
+          <button class="linkbtn" id="verlies-reset" hidden>Terug naar standaard</button>
+        </div>
+        <div class="fields">
+          <label class="field" for="f-pak"><span>m² per pak</span><input id="f-pak" class="num" inputmode="decimal"></label>
+          <label class="field" for="f-montage"><span>Montage</span>
+            <select id="f-montage"><option value="lijm">Verlijmen</option><option value="zwevend">Zwevend</option></select></label>
+          <label class="field" for="f-afwerking"><span>Afwerking in het werk</span>
+            <select id="f-afwerking"><option value="geen">Geen (voorbehandeld)</option><option value="olie">Olie</option><option value="lak">Lak</option></select></label>
+        </div>
+        <div class="fields two" id="lagen-rij">
+          <label class="field" for="f-lagen"><span>Aantal lagen</span><input id="f-lagen" class="num" inputmode="numeric"></label>
+          <div></div>
+        </div>
+        <label class="check" for="f-ab" id="ab-rij"><input type="checkbox" id="f-ab"> Visgraat in aparte A- en B-pakken (links/rechts)</label>
+      </section>
+
+      <section class="card" aria-labelledby="l-plint">
+        <p class="label" id="l-plint">Plinten</p>
+        <div class="fields">
+          <label class="field" for="f-plint-l"><span>Lengte per stuk (m)</span><input id="f-plint-l" class="num" inputmode="decimal"></label>
+          <label class="field" for="f-plint-m"><span>Extra voor hoeken %</span><input id="f-plint-m" class="num" inputmode="decimal"></label>
+          <label class="field" for="f-deuren"><span>Deuropeningen eraf (m)</span><input id="f-deuren" class="num" inputmode="decimal"></label>
+        </div>
+      </section>
+
+      <details class="card" id="inst-card">
+        <summary class="label" style="cursor:pointer">Mijn standaardwaarden</summary>
+        <div class="inst">
+          <p class="hint">Dit vul je één keer in. De calculator gebruikt het daarna bij elke berekening en onthoudt het in deze browser.</p>
+          <h3>Snijverlies per legpatroon (%)</h3>
+          <div class="fields" id="inst-verlies"></div>
+          <h3>Verbruik</h3>
+          <div class="fields">
+            <label class="field" for="i-lijm"><span>Lijm kg per m²</span><input id="i-lijm" class="num" data-i="lijmKg" inputmode="decimal"></label>
+            <label class="field" for="i-lijm-onder"><span>Lijm ondervloer kg per m²</span><input id="i-lijm-onder" class="num" data-i="lijmOnderKg" inputmode="decimal"></label>
+            <label class="field" for="i-emmer"><span>Kg per emmer</span><input id="i-emmer" class="num" data-i="emmerKg" inputmode="decimal"></label>
+            <label class="field" for="i-onder"><span>Ondervloer extra %</span><input id="i-onder" class="num" data-i="onderExtra" inputmode="decimal"></label>
+            <label class="field" for="i-olie"><span>Olie L per m² per laag</span><input id="i-olie" class="num" data-i="olieL" inputmode="decimal"></label>
+            <label class="field" for="i-lak"><span>Lak L per m² per laag</span><input id="i-lak" class="num" data-i="lakL" inputmode="decimal"></label>
+            <label class="field" for="i-blik"><span>Liter per blik</span><input id="i-blik" class="num" data-i="blikL" inputmode="decimal"></label>
+            <label class="field" for="i-klein"><span>Kleine ruimte onder m²</span><input id="i-klein" class="num" data-i="kleinM2" inputmode="decimal"></label>
+          </div>
+          <div><button class="btn" id="inst-reset">Standaardwaarden herstellen</button></div>
+        </div>
+      </details>
+    </div>
+
+    <aside class="card result" aria-live="polite">
+      <p class="label">Bestellijst</p>
+      <div class="totaal">
+        <span class="v" id="r-pakken">0 pakken</span>
+        <span class="s" id="r-sub"></span>
+      </div>
+      <div class="lijst" id="r-lijst"></div>
+      <div class="waarsch" id="r-waarsch"></div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <button class="btn primary" id="kopieer">Kopieer voor bestelling</button>
+        <span class="toast" id="toast" hidden>Gekopieerd</span>
+      </div>
+      <textarea id="kopie-tekst" readonly hidden style="width:100%;min-height:120px;font:13px var(--f-num);border:1px solid var(--line);border-radius:8px;padding:8px;background:var(--soft)" aria-label="Bestellijst als tekst"></textarea>
+    </aside>
+  </div>
+</main>
+
+<script>
+(() => {
+  "use strict";
+  const $ = s => document.querySelector(s);
+  const esc = s => String(s ?? "").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const num = s => { s = String(s ?? "").trim().replace(/\s/g,""); if (!s) return 0; if (s.includes(",")) s = s.replace(/\./g,"").replace(",","."); const n = parseFloat(s); return isFinite(n) ? n : 0; };
+  const nl = (n, d=2) => Number(n).toLocaleString("nl-NL",{minimumFractionDigits:d,maximumFractionDigits:d});
+  const kort = n => Number(n).toLocaleString("nl-NL",{maximumFractionDigits:2});
+
+  const TYPES = [["lamel","Lamelparket"],["massief","Massief"],["pvc","PVC"],["laminaat","Laminaat"],["tapis","Tapis"]];
+  const PATRONEN = [["recht","Stroken recht"],["wild","Wildverband"],["visgraat","Visgraat"],["hongaars","Hongaarse punt"]];
+  const ONDER = [["geen","Geen"],["bluefloor","Bluefloor"],["heatfoil","Heat foil"],["platen7","Ondervloerplaten 7 mm"],["mozaiek","Mozaïek"],["spaanplaat","Spaanplaat"]];
+  const ROL = new Set(["bluefloor","heatfoil"]);
+  const GELIJMD = new Set(["mozaiek","spaanplaat"]);
+  const eenheid = k => ROL.has(k) ? ["rol","rollen"] : ["pak","pakken"];
+  const DEFAULTS = {
+    verlies:{recht:6, wild:9, visgraat:13, hongaars:16},
+    onderPak:{bluefloor:15, heatfoil:15, mozaiek:3.79}, onderExtra:5,
+    lijmKg:1.0, lijmOnderKg:1.0, emmerKg:15, olieL:0.06, lakL:0.1, blikL:2.5, kleinM2:5
+  };
+  const KEY = "psg-materiaal-instellingen";
+
+  let inst = structuredClone(DEFAULTS);
+  try { const s = JSON.parse(localStorage.getItem(KEY) || "null"); if (s) inst = Object.assign(structuredClone(DEFAULTS), s, {verlies:Object.assign({}, DEFAULTS.verlies, s.verlies), onderPak:Object.assign({}, DEFAULTS.onderPak, Object.fromEntries(Object.entries(s.onderPak||{}).filter(([,v])=>String(v).trim()!=="")))}); } catch(_) {}
+  const bewaarInst = () => { try { localStorage.setItem(KEY, JSON.stringify(inst)); } catch(_) {} };
+
+  let uid = 0;
+  const voorbeeld = () => ({
+    rooms:[{id:++uid,naam:"Woonkamer",m2:"38,4",om:"27,2"},{id:++uid,naam:"Hal",m2:"6,5",om:"12,4"},{id:++uid,naam:"Toilet",m2:"1,9",om:"5,6"}],
+    type:"lamel", patroon:"visgraat", onder:"platen7", verlies:null, pak:"1,62", montage:"lijm", afwerking:"olie", lagen:"2", ab:true,
+    plintL:"2,4", plintM:"10", deuren:"2,6", voorbeeld:true
+  });
+  const leeg = () => ({
+    rooms:[{id:++uid,naam:"",m2:"",om:""}],
+    type:"lamel", patroon:"recht", onder:"geen", verlies:null, pak:"", montage:"lijm", afwerking:"geen", lagen:"2", ab:false,
+    plintL:"2,4", plintM:"10", deuren:"", voorbeeld:false
+  });
+  let st = voorbeeld();
+
+  /* ---------- Render invoer ---------- */
+  function renderRooms(){
+    $("#rooms").innerHTML = st.rooms.map(r => `<div class="room" data-id="${r.id}">
+      <input id="r${r.id}-naam" data-k="naam" placeholder="Bijv. woonkamer" value="${esc(r.naam)}" aria-label="Naam ruimte">
+      <input id="r${r.id}-m2" data-k="m2" class="num" inputmode="decimal" placeholder="0,0" value="${esc(r.m2)}" aria-label="Oppervlakte m²">
+      <input id="r${r.id}-om" data-k="om" class="num" inputmode="decimal" placeholder="0,0" value="${esc(r.om)}" aria-label="Omtrek m">
+      <button class="x" data-del="${r.id}" aria-label="Ruimte verwijderen" ${st.rooms.length<2?"disabled":""}>×</button></div>`).join("");
+  }
+  function renderChips(){
+    $("#c-type").innerHTML = TYPES.map(([k,t])=>`<button data-type="${k}" aria-pressed="${st.type===k}">${t}</button>`).join("");
+    $("#c-patroon").innerHTML = PATRONEN.map(([k,t])=>`<button data-pat="${k}" aria-pressed="${st.patroon===k}">${t}<small>${kort(inst.verlies[k])}%</small></button>`).join("");
+    $("#c-onder").innerHTML = ONDER.map(([k,t])=>`<button data-onder="${k}" aria-pressed="${st.onder===k}">${t}</button>`).join("");
+  }
+  function renderVelden(){
+    const std = inst.verlies[st.patroon];
+    const eigen = st.verlies !== null && num(st.verlies) !== std;
+    if (document.activeElement?.id !== "f-verlies") $("#f-verlies").value = st.verlies !== null ? st.verlies : kort(std);
+    $("#verlies-badge").textContent = eigen ? `Aangepast (standaard ${kort(std)}%)` : "Standaard";
+    $("#verlies-badge").classList.toggle("af", eigen);
+    $("#verlies-reset").hidden = !eigen;
+    $("#f-pak").value = st.pak; $("#f-montage").value = st.montage; $("#f-afwerking").value = st.afwerking;
+    $("#f-lagen").value = st.lagen; $("#f-ab").checked = st.ab;
+    $("#lagen-rij").hidden = st.afwerking === "geen";
+    $("#f-montage").disabled = st.type === "tapis";
+    $("#onder-rij").hidden = st.onder === "geen";
+    if (st.onder !== "geen"){
+      $("#onder-pak-label").textContent = `m² per ${eenheid(st.onder)[0]} ${ONDER.find(o=>o[0]===st.onder)[1]}`;
+      if (document.activeElement?.id !== "f-onder-pak") { const v = inst.onderPak[st.onder]; $("#f-onder-pak").value = typeof v === "number" ? kort(v) : (v || ""); }
+    }
+    $("#ab-rij").hidden = st.patroon !== "visgraat";
+    $("#f-plint-l").value = st.plintL; $("#f-plint-m").value = st.plintM; $("#f-deuren").value = st.deuren;
+    $("#voorbeeld-hint").hidden = !st.voorbeeld;
+  }
+  function renderInst(){
+    $("#inst-verlies").innerHTML = PATRONEN.map(([k,t])=>`<label class="field" for="iv-${k}"><span>${t}</span><input id="iv-${k}" class="num" data-iv="${k}" inputmode="decimal" value="${kort(inst.verlies[k])}"></label>`).join("");
+    document.querySelectorAll("[data-i]").forEach(el => el.value = kort(inst[el.dataset.i]));
+  }
+
+  /* ---------- Rekenen ---------- */
+  function bereken(){
+    const rooms = st.rooms.map(r => ({naam:r.naam.trim() || "Ruimte", m2:num(r.m2), om:num(r.om)}));
+    const m2 = rooms.reduce((a,r)=>a+r.m2,0), om = rooms.reduce((a,r)=>a+r.om,0);
+    const pct = st.verlies !== null ? num(st.verlies) : inst.verlies[st.patroon];
+    const nodig = m2 * (1 + pct/100);
+    const pak = num(st.pak);
+    let pakken = pak > 0 ? Math.ceil(nodig / pak - 1e-9) : 0;
+    const ab = st.patroon === "visgraat" && st.ab;
+    if (ab && pakken % 2) pakken += 1;
+    const geleverd = pakken * pak;
+    const out = {m2, om, pct, nodig, pak, pakken, ab, geleverd, regels:[], waarsch:[]};
+
+    if (pak > 0){
+      out.regels.push({t:"Vloer", q:`${pakken} pakken`, d: ab
+        ? `${pakken/2} pakken A + ${pakken/2} pakken B · ${nl(geleverd)} m² geleverd (${nl(geleverd - m2)} m² reserve)`
+        : `${nl(nodig)} m² nodig incl. ${kort(pct)}% snijverlies · ${nl(geleverd)} m² geleverd`});
+    } else if (m2 > 0){
+      out.regels.push({t:"Vloer", q:`${nl(nodig)} m²`, d:`incl. ${kort(pct)}% snijverlies · vul m² per pak in voor het aantal pakken`});
+    }
+    const onderLijm = st.onder !== "geen" && GELIJMD.has(st.onder);
+    if (m2 > 0 && (st.montage === "lijm" || st.type === "tapis")){
+      const kg = m2 * inst.lijmKg, em = inst.emmerKg > 0 ? Math.ceil(kg / inst.emmerKg - 1e-9) : 0;
+      out.regels.push({t: onderLijm ? (st.type === "tapis" ? "Lijm tapis" : "Lijm vloer") : (st.type === "tapis" ? "Lijm tapis" : "Lijm"), q:`${em} emmers`, d:`${nl(kg,1)} kg bij ${kort(inst.lijmKg)} kg/m² · emmer ${kort(inst.emmerKg)} kg`});
+    }
+    if (m2 > 0 && st.onder !== "geen"){
+      const naam = ONDER.find(o=>o[0]===st.onder)[1], opp = m2 * (1 + inst.onderExtra/100), opak = num(inst.onderPak[st.onder]), [een, meer] = eenheid(st.onder);
+      out.regels.push(opak > 0
+        ? {t:`Ondervloer ${naam}`, q:`${Math.ceil(opp / opak - 1e-9)} ${meer}`, d:`${nl(opp,1)} m² incl. ${kort(inst.onderExtra)}% extra · ${kort(opak)} m² per ${een}`}
+        : {t:`Ondervloer ${naam}`, q:`${nl(opp,1)} m²`, d:`incl. ${kort(inst.onderExtra)}% extra · vul m² per ${een} in voor het aantal ${meer}`});
+      if (onderLijm){
+        const kg = m2 * inst.lijmOnderKg, em = inst.emmerKg > 0 ? Math.ceil(kg / inst.emmerKg - 1e-9) : 0;
+        out.regels.push({t:`Lijm ${naam.toLowerCase()}`, q:`${em} emmers`, d:`${nl(kg,1)} kg bij ${kort(inst.lijmOnderKg)} kg/m² om de ${naam.toLowerCase()} te verlijmen · emmer ${kort(inst.emmerKg)} kg`});
+      }
+    }
+    if (m2 > 0 && st.afwerking !== "geen"){
+      const perL = st.afwerking === "olie" ? inst.olieL : inst.lakL, lagen = Math.max(1, Math.round(num(st.lagen)));
+      const liter = m2 * perL * lagen, blik = inst.blikL > 0 ? Math.ceil(liter / inst.blikL - 1e-9) : 0;
+      out.regels.push({t: st.afwerking === "olie" ? "Olie" : "Lak", q:`${blik} blikken`, d:`${nl(liter,1)} liter · ${lagen} ${lagen===1?"laag":"lagen"} × ${kort(perL)} L/m² · blik ${kort(inst.blikL)} L`});
+    }
+    const plintNetto = Math.max(0, om - num(st.deuren)), plintL = num(st.plintL);
+    if (plintNetto > 0){
+      const met = plintNetto * (1 + num(st.plintM)/100), stuks = plintL > 0 ? Math.ceil(met / plintL - 1e-9) : 0;
+      out.regels.push({t:"Plinten", q: plintL > 0 ? `${stuks} stuks` : `${nl(met,1)} m`,
+        d:`${nl(plintNetto,1)} m netto + ${kort(num(st.plintM))}% voor hoeken = ${nl(met,1)} m${plintL>0?` · lengte ${kort(plintL)} m`:""}`});
+    }
+
+    // Waarschuwingen
+    const std = inst.verlies[st.patroon];
+    if (pct < std) out.waarsch.push(`Snijverlies ${kort(pct)}% is lager dan je standaard voor ${PATRONEN.find(p=>p[0]===st.patroon)[1].toLowerCase()} (${kort(std)}%).`);
+    const klein = rooms.filter(r => r.m2 > 0 && r.m2 < inst.kleinM2);
+    if (klein.length) out.waarsch.push(`${klein.map(r=>r.naam).join(", ")} ${klein.length>1?"zijn kleine ruimtes":"is een kleine ruimte"} (onder ${kort(inst.kleinM2)} m²). Daar is het snijverlies vaak hoger; overweeg een paar procent extra.`);
+    if (m2 > 0 && pak > 0 && geleverd - nodig > pak * 0.85 && !ab) out.waarsch.push(`Je houdt bijna een heel pak over. Controleer of de m² per pak klopt.`);
+    if (st.patroon === "visgraat" && !st.ab && m2 > 0) out.waarsch.push(`Levert je leverancier visgraat in aparte A- en B-pakken? Zet dan het vinkje aan, dan wordt het aantal even verdeeld.`);
+    return out;
+  }
+
+  function renderResult(){
+    const r = bereken();
+    $("#t-m2").textContent = nl(r.m2); $("#t-om").textContent = nl(r.om);
+    $("#r-pakken").textContent = r.pak > 0 ? `${r.pakken} ${r.pakken===1?"pak":"pakken"}` : `${nl(r.nodig)} m²`;
+    $("#r-sub").textContent = r.m2 > 0 ? `${nl(r.m2)} m² vloer · ${kort(r.pct)}% snijverlies` : "Vul de ruimtes in om te beginnen";
+    $("#r-lijst").innerHTML = r.regels.map(x=>`<div class="regel"><b>${esc(x.t)}</b><span class="q">${esc(x.q)}</span><span class="d">${esc(x.d)}</span></div>`).join("")
+      || `<div class="regel"><span class="d">Nog niets te bestellen.</span></div>`;
+    $("#r-waarsch").innerHTML = r.waarsch.map(w=>`<div>${esc(w)}</div>`).join("");
+    return r;
+  }
+  function renderAll(){ renderRooms(); renderChips(); renderVelden(); renderInst(); renderResult(); }
+
+  /* ---------- Events ---------- */
+  const markeer = () => { if (st.voorbeeld){ st.voorbeeld = false; $("#voorbeeld-hint").hidden = true; } };
+  document.addEventListener("input", e => {
+    const t = e.target;
+    const room = t.closest(".room");
+    if (room){ const r = st.rooms.find(x=>x.id===+room.dataset.id); if (r){ r[t.dataset.k] = t.value; markeer(); renderResult(); } return; }
+    const map = {"f-pak":"pak","f-lagen":"lagen","f-plint-l":"plintL","f-plint-m":"plintM","f-deuren":"deuren"};
+    if (map[t.id]){ st[map[t.id]] = t.value; markeer(); renderResult(); return; }
+    if (t.id === "f-onder-pak"){ inst.onderPak[st.onder] = t.value; bewaarInst(); markeer(); renderResult(); return; }
+    if (t.id === "f-verlies"){ st.verlies = t.value.trim()==="" ? null : t.value; markeer(); renderVelden(); renderResult(); return; }
+    if (t.dataset.iv){ inst.verlies[t.dataset.iv] = num(t.value); bewaarInst(); renderChips(); renderVelden(); renderResult(); return; }
+    if (t.dataset.i){ inst[t.dataset.i] = num(t.value); bewaarInst(); renderResult(); return; }
+  });
+  document.addEventListener("change", e => {
+    const t = e.target;
+    if (t.id === "f-montage"){ st.montage = t.value; renderResult(); }
+    if (t.id === "f-afwerking"){ st.afwerking = t.value; renderVelden(); renderResult(); }
+    if (t.id === "f-ab"){ st.ab = t.checked; renderResult(); }
+  });
+  document.addEventListener("click", e => {
+    const t = e.target.closest("button"); if (!t) return;
+    if (t.dataset.type){ st.type = t.dataset.type; if (st.type === "tapis") st.montage = "lijm"; markeer(); renderChips(); renderVelden(); renderResult(); return; }
+    if (t.dataset.onder){ st.onder = t.dataset.onder; markeer(); renderChips(); renderVelden(); renderResult(); return; }
+    if (t.dataset.pat){ st.patroon = t.dataset.pat; st.verlies = null; markeer(); renderChips(); renderVelden(); renderResult(); return; }
+    if (t.dataset.del){ st.rooms = st.rooms.filter(r=>r.id!==+t.dataset.del); renderRooms(); renderResult(); return; }
+    if (t.id === "add-room"){ const r = {id:++uid,naam:"",m2:"",om:""}; st.rooms.push(r); markeer(); renderRooms(); renderResult(); document.getElementById(`r${r.id}-naam`)?.focus(); return; }
+    if (t.id === "verlies-reset"){ st.verlies = null; renderVelden(); renderResult(); return; }
+    if (t.id === "nieuw"){ st = leeg(); renderAll(); document.querySelector(".room input")?.focus(); return; }
+    if (t.id === "inst-reset"){ inst = structuredClone(DEFAULTS); bewaarInst(); renderAll(); return; }
+    if (t.id === "kopieer") kopieer();
+  });
+
+  function kopieer(){
+    const r = bereken();
+    const type = TYPES.find(x=>x[0]===st.type)[1], pat = PATRONEN.find(x=>x[0]===st.patroon)[1];
+    let tekst = `Bestelling – ${type}, ${pat.toLowerCase()}\n`;
+    tekst += `Oppervlakte: ${nl(r.m2)} m² (${st.rooms.filter(x=>num(x.m2)>0).map(x=>`${x.naam||"ruimte"} ${kort(num(x.m2))}`).join(", ")})\n`;
+    r.regels.forEach(x => { tekst += `- ${x.t}: ${x.q}${x.t==="Vloer" && r.ab ? ` (${r.pakken/2} A + ${r.pakken/2} B)` : ""}\n`; });
+    const ok = () => { $("#toast").hidden = false; setTimeout(()=>$("#toast").hidden = true, 1800); };
+    const fallback = () => { const ta = $("#kopie-tekst"); ta.hidden = false; ta.value = tekst; ta.focus(); ta.select(); };
+    try { navigator.clipboard.writeText(tekst).then(ok, fallback); } catch(_) { fallback(); }
+  }
+
+  renderAll();
+})();
+</script>
+</body>
+</html>
