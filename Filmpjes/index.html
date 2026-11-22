@@ -52,7 +52,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 .kop{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
 .hint{font-size:12.5px;color:var(--muted);margin:0}
 
-input[type=text],input:not([type]),select,textarea{width:100%;border:1px solid var(--line);border-radius:8px;background:var(--card);padding:8px 10px;min-width:0}
+input[type=text],input[type=number],input:not([type]),select,textarea{width:100%;border:1px solid var(--line);border-radius:8px;background:var(--card);padding:8px 10px;min-width:0}
 input[type=text],input:not([type]),select{height:38px}
 input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-tint);outline:none}
 .field{display:flex;flex-direction:column;gap:4px;min-width:0}
@@ -74,6 +74,11 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 .foto img,.foto canvas{width:56px;height:76px;object-fit:cover;border-radius:7px;display:block;background:var(--line)}
 .foto .mid{display:grid;grid-template-columns:110px minmax(0,1fr);gap:8px;min-width:0}
 .foto .acts{display:flex;gap:2px}
+.duim{position:relative;width:56px}
+.duim b{position:absolute;left:4px;bottom:4px;font-size:10.5px;font-weight:700;color:#fff;background:rgba(0,0,0,.65);border-radius:5px;padding:1px 5px}
+.knip{grid-column:1 / -1;display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;font-size:12.5px;color:var(--muted)}
+.knip input{width:72px;height:32px;text-align:right;font-variant-numeric:tabular-nums}
+.knip strong{color:var(--ink);font-weight:600}
 .icon-btn{border:0;background:transparent;color:var(--muted);width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:16px;line-height:1}
 .icon-btn:hover{background:var(--card);color:var(--ink)}
 .icon-btn.del:hover{color:var(--bad)}
@@ -114,7 +119,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
   <div class="in">
     <div class="brand">
       <h1>Filmpjesmaker</h1>
-      <p>Parket Specialist Gouda · reels van je eigen foto's</p>
+      <p>Parket Specialist Gouda · reels van je eigen foto's en video's</p>
     </div>
     <a class="bar-btn" href="../">← Kantoor</a>
   </div>
@@ -127,11 +132,11 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
       <section class="card" aria-labelledby="l-fotos">
         <div class="kop">
           <p class="label" id="l-fotos">1 · Foto's</p>
-          <label class="btn primary filebtn">Foto's kiezen<input type="file" id="bestanden" accept="image/*" multiple></label>
+          <label class="btn primary filebtn">Foto's en video's kiezen<input type="file" id="bestanden" accept="image/*,video/*" multiple></label>
         </div>
-        <p class="hint" id="demo-hint">Er staan nu voorbeeldfoto's in. Kies je eigen foto's, dan verdwijnen ze.</p>
+        <p class="hint" id="demo-hint">Er staan nu voorbeeldfoto's in. Kies je eigen foto's of video's, dan verdwijnen ze.</p>
         <div class="fotos" id="fotos"></div>
-        <p class="hint">Geef elke foto een label. Je foto's blijven op je eigen toestel en het filmpje bevat geen locatiegegevens.</p>
+        <p class="hint">Geef elke foto of video een label. Bij een video kies je welk stukje je gebruikt; het geluid valt weg. Alles blijft op je eigen toestel en het filmpje bevat geen locatiegegevens.</p>
       </section>
 
       <section class="card" aria-labelledby="l-sjabloon">
@@ -260,7 +265,41 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
   }
 
   /* ---------- Foto's inladen ---------- */
+  const isVideo = f => /^video\//.test(f.type) || /\.(mov|mp4|m4v|webm)$/i.test(f.name);
+  function wacht(el, ev, ms=15000){
+    return new Promise((res, rej) => {
+      const ok = () => { opruim(); res(); }, fout = () => { opruim(); rej(new Error("media")); };
+      const tm = setTimeout(fout, ms);
+      const opruim = () => { clearTimeout(tm); el.removeEventListener(ev, ok); el.removeEventListener("error", fout); };
+      el.addEventListener(ev, ok, { once:true }); el.addEventListener("error", fout, { once:true });
+    });
+  }
+  async function laadVideo(file){
+    const url = URL.createObjectURL(file);
+    const v = document.createElement("video");
+    v.muted = true; v.playsInline = true; v.setAttribute("playsinline",""); v.preload = "auto"; v.src = url;
+    try {
+      await wacht(v, "loadeddata");
+      const dur = isFinite(v.duration) ? v.duration : 0;
+      if (!v.videoWidth || !dur) throw new Error("leeg");
+      v.currentTime = Math.min(.5, dur/2); await wacht(v, "seeked", 8000).catch(()=>{});
+      const tc = document.createElement("canvas"), tk = 160 / Math.max(v.videoWidth, v.videoHeight);
+      tc.width = Math.round(v.videoWidth*tk); tc.height = Math.round(v.videoHeight*tk); tc.getContext("2d").drawImage(v,0,0,tc.width,tc.height);
+      const start = dur > 8 ? 1 : 0;
+      const p = { src:v, vid:v, url, duur:dur, van:start, tot:Math.min(dur, start + 4), thumb:tc.toDataURL("image/jpeg",.7) };
+      await vernieuwStil(p);
+      return p;
+    } catch(e) { URL.revokeObjectURL(url); throw e; }
+  }
+  // Stilstaand beeld van het begin van het gekozen stukje (voor titel en wegschuif-effect)
+  async function vernieuwStil(p){
+    const v = p.vid;
+    if (!p.still){ p.still = document.createElement("canvas"); p.still.width = v.videoWidth; p.still.height = v.videoHeight; }
+    try { v.pause(); v.currentTime = p.van + .05; await wacht(v, "seeked", 8000); } catch(_) {}
+    p.still.getContext("2d").drawImage(v, 0, 0, p.still.width, p.still.height);
+  }
   async function laad(file){
+    if (isVideo(file)) return laadVideo(file);
     const url = URL.createObjectURL(file);
     try {
       const img = new Image(); img.src = url; await img.decode();
@@ -281,13 +320,19 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
       try { const p = await laad(f); const n = st.fotos.length;
         const label = n === 0 ? "voor" : "na";
         st.fotos.push({ id:++uid, ...p, label, tekst:"" });
-      } catch(_) { melding(`${f.name} kon niet worden geopend. Kies een JPG, PNG of HEIC-foto die je telefoon kan tonen.`); }
+      } catch(_) { melding(isVideo(f)
+          ? `${f.name} kan in deze browser niet worden afgespeeld. Video's van een iPhone werken het best in Safari; op een Windows-pc kun je de iPhone-camera op "Meest compatibel" zetten.`
+          : `${f.name} kon niet worden geopend. Kies een JPG, PNG of HEIC-foto die je telefoon kan tonen.`); }
     }
     if (st.fotos.length > 2 && !st.fotos.some(p=>p.label==="tijdens")) st.fotos.forEach((p,i)=>{ if (i>0 && i<st.fotos.length-1) p.label = "tijdens"; });
     alles();
   });
 
   /* ---------- Tijdlijn ---------- */
+  // Duur van een fragment: bij video het gekozen stukje, bij een foto het tempo
+  const duur = (p, basis) => p.vid ? Math.max(.5, Math.min(20, p.tot - p.van)) : basis;
+  // Een titel of wegschuif-effect gebruikt een stilstaand beeld: van een video het eerste beeld van het stukje
+  const stil = p => p.vid ? { src:p.still } : p;
   function bouw(){
     const P = st.fotos, d = st.tempo, s = [];
     if (!P.length){ segs = []; totaal = 0; return; }
@@ -295,21 +340,23 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
     const titel = st.titel.trim();
     if (st.sjabloon === "voorna"){
       const v = met("voor")[0] || P[0], n = met("na")[0] || P[P.length-1];
-      if (titel) s.push({k:"titel", img:v, d:2.2, tekst:titel});
-      s.push({k:"foto", img:v, d, chip:"VOOR", tekst:v.tekst});
-      if (v !== n) s.push({k:"wipe", a:v, b:n, d:2.6, geenFade:true});
-      s.push({k:"foto", img:n, d:d+.4, chip:"NA", tekst:n.tekst, geenFade: v !== n});
-      P.filter(p => p !== v && p !== n && (p.label === "na" || p.label === "detail")).forEach(p => s.push({k:"foto", img:p, d, tekst:p.tekst}));
+      const tijdens = P.filter(p => p !== v && p !== n && p.label === "tijdens");
+      if (titel) s.push({k:"titel", img:stil(v), d:2.2, tekst:titel});
+      s.push({k:"foto", img:v, d:duur(v,d), chip:"VOOR", tekst:v.tekst});
+      tijdens.forEach(p => s.push({k:"foto", img:p, d:duur(p, Math.max(1.2, d*.6)), chip:"TIJDENS", tekst:p.tekst}));
+      if (v !== n) s.push({k:"wipe", a:stil(v), b:stil(n), d:2.6, geenFade: !tijdens.length});
+      s.push({k:"foto", img:n, d:duur(n,d+.4), chip:"NA", tekst:n.tekst, geenFade: v !== n});
+      P.filter(p => p !== v && p !== n && (p.label === "na" || p.label === "detail")).forEach(p => s.push({k:"foto", img:p, d:duur(p,d), tekst:p.tekst}));
     } else if (st.sjabloon === "ruwaf"){
-      if (titel) s.push({k:"titel", img:P[0], d:2.2, tekst:titel});
+      if (titel) s.push({k:"titel", img:stil(P[0]), d:2.2, tekst:titel});
       const orde = ["voor","tijdens","na","detail"];
-      [...P].sort((a,b)=>orde.indexOf(a.label)-orde.indexOf(b.label)).forEach(p => s.push({k:"foto", img:p, d, chip: p.label === "detail" ? "" : p.label.toUpperCase(), tekst:p.tekst}));
+      [...P].sort((a,b)=>orde.indexOf(a.label)-orde.indexOf(b.label)).forEach(p => s.push({k:"foto", img:p, d:duur(p,d), chip: p.label === "detail" ? "" : p.label.toUpperCase(), tekst:p.tekst}));
     } else if (st.sjabloon === "detail"){
-      if (titel) s.push({k:"titel", img:P[0], d:2.2, tekst:titel});
-      P.forEach(p => s.push({k:"foto", img:p, d:d*1.5, zoom:.22, tekst:p.tekst}));
+      if (titel) s.push({k:"titel", img:stil(P[0]), d:2.2, tekst:titel});
+      P.forEach(p => s.push({k:"foto", img:p, d:duur(p,d*1.5), zoom: p.vid ? .1 : .22, tekst:p.tekst}));
     } else {
-      s.push({k:"titel", img:P[0], d:2.4, tekst: titel || "Tip van de vakman", klein:"Tip van de vakman"});
-      P.forEach((p,i) => s.push({k:"foto", img:p, d:d+.8, stap:`Stap ${i+1}`, tekst:p.tekst}));
+      s.push({k:"titel", img:stil(P[0]), d:2.4, tekst: titel || "Tip van de vakman", klein:"Tip van de vakman"});
+      P.forEach((p,i) => s.push({k:"foto", img:p, d:duur(p,d+.8), stap:`Stap ${i+1}`, tekst:p.tekst}));
     }
     s.push({k:"eind", d:2.8});
     let a = 0; s.forEach((x,i) => { x.i = i; x.start = a; a += x.d; });
@@ -319,7 +366,9 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
   /* ---------- Tekenen ---------- */
   const ease = x => x < .5 ? 2*x*x : 1 - Math.pow(-2*x+2, 2)/2;
   function cover(src, scale=1, dx=0, dy=0){
-    const iw = src.width, ih = src.height, k = Math.max(W/iw, H/ih) * scale, w = iw*k, h = ih*k;
+    const iw = src.videoWidth || src.width, ih = src.videoHeight || src.height;
+    if (!iw || !ih) return;
+    const k = Math.max(W/iw, H/ih) * scale, w = iw*k, h = ih*k;
     ctx.drawImage(src, (W-w)/2 + dx*(w-W)/2, (H-h)/2 + dy*(h-H)/2, w, h);
   }
   function lijnen(tekst, maxW){
@@ -400,9 +449,32 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
     tt = Math.min(tt, totaal - 1e-3);
     let i = segs.findIndex(s => tt < s.start + s.d); if (i < 0) i = segs.length - 1;
     const s = segs[i], local = tt - s.start;
+    syncVideos(s, local, segs[i+1]);
     if (i > 0 && local < FADE && !s.geenFade){
       const v = segs[i-1]; teken(v, v.d); ctx.globalAlpha = local / FADE; teken(s, local); ctx.globalAlpha = 1;
     } else teken(s, local);
+  }
+  // Laat de video van het huidige fragment op de juiste plek lopen; zet de volgende alvast klaar; de rest staat stil
+  function syncVideos(s, local, volgende){
+    const actief = s.k === "foto" && s.img.vid ? s.img : null;
+    const klaar = volgende && volgende.k === "foto" && volgende.img.vid ? volgende.img : null;
+    st.fotos.forEach(p => {
+      if (!p.vid) return;
+      const v = p.vid;
+      if (p === actief){
+        const doel = Math.min(p.tot, p.van + local);
+        if (spelen){
+          if (Math.abs(v.currentTime - doel) > .35) v.currentTime = doel;
+          if (v.paused) v.play().catch(()=>{});
+        } else {
+          if (!v.paused) v.pause();
+          if (Math.abs(v.currentTime - doel) > .05) v.currentTime = doel;
+        }
+      } else {
+        if (!v.paused) v.pause();
+        if (p === klaar && Math.abs(v.currentTime - p.van) > .1 && !v.seeking) v.currentTime = p.van;
+      }
+    });
   }
 
   /* ---------- Afspelen ---------- */
@@ -419,6 +491,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
   function speel(aan){
     spelen = aan; $("#speel").textContent = aan ? "❚❚" : "▶"; $("#speel").setAttribute("aria-label", aan ? "Pauzeren" : "Afspelen");
     if (aan){ last = performance.now(); requestAnimationFrame(lus); }
+    else st.fotos.forEach(p => { if (p.vid && !p.vid.paused) p.vid.pause(); });
   }
   $("#speel").onclick = () => { if (!opnemen) speel(!spelen); };
 
@@ -501,11 +574,16 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
   function renderFotos(){
     const el = $("#fotos");
     if (!st.fotos.length){ el.innerHTML = `<div class="leeg">Nog geen foto's. Kies ze van je telefoon of computer.</div>`; return; }
+    const sec = n => n.toLocaleString("nl-NL",{maximumFractionDigits:1});
     el.innerHTML = st.fotos.map((p,i) => `<div class="foto" data-id="${p.id}">
-      <img src="${p.thumb}" alt="">
+      <div class="duim"><img src="${p.thumb}" alt="">${p.vid ? `<b>▶ ${sec(p.duur)}s</b>` : ""}</div>
       <div class="mid">
         <select id="lab-${p.id}" data-k="label" aria-label="Label">${LABELS.map(([k,t])=>`<option value="${k}" ${p.label===k?"selected":""}>${t}</option>`).join("")}</select>
         <input type="text" id="tek-${p.id}" data-k="tekst" maxlength="80" placeholder="Tekst in beeld (mag leeg)" value="${esc(p.tekst)}" aria-label="Tekst in beeld">
+        ${p.vid ? `<div class="knip">Gebruik van
+          <input type="number" id="van-${p.id}" data-k="van" min="0" max="${p.duur.toFixed(1)}" step="0.5" value="${p.van}" aria-label="Begin in seconden">
+          tot <input type="number" id="tot-${p.id}" data-k="tot" min="0" max="${p.duur.toFixed(1)}" step="0.5" value="${+p.tot.toFixed(1)}" aria-label="Einde in seconden">
+          seconden · <strong id="len-${p.id}">${sec(Math.max(0,p.tot-p.van))} s</strong></div>` : ""}
       </div>
       <div class="acts">
         <button class="icon-btn" data-op="${p.id}" aria-label="Omhoog" ${i===0?"disabled":""}>↑</button>
@@ -533,11 +611,29 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
     if (b.dataset.tempo){ st.tempo = +b.dataset.tempo; renderSjablonen(); herbouw(); return; }
     if (b.dataset.op){ const i = zoek(b.dataset.op); if (i>0){ [st.fotos[i-1],st.fotos[i]] = [st.fotos[i],st.fotos[i-1]]; alles(); } return; }
     if (b.dataset.neer){ const i = zoek(b.dataset.neer); if (i<st.fotos.length-1){ [st.fotos[i+1],st.fotos[i]] = [st.fotos[i],st.fotos[i+1]]; alles(); } return; }
-    if (b.dataset.weg){ st.fotos.splice(zoek(b.dataset.weg),1); t = 0; alles(); return; }
+    if (b.dataset.weg){
+      const [p] = st.fotos.splice(zoek(b.dataset.weg),1);
+      if (p && p.vid){ p.vid.pause(); p.vid.removeAttribute("src"); p.vid.load(); URL.revokeObjectURL(p.url); }
+      t = 0; alles(); return;
+    }
   });
   document.addEventListener("input", e => {
     const el = e.target, rij = el.closest(".foto");
-    if (rij){ const p = st.fotos.find(x => x.id === +rij.dataset.id); if (p){ p[el.dataset.k] = el.value; herbouw(); } return; }
+    if (rij){
+      const p = st.fotos.find(x => x.id === +rij.dataset.id); if (!p) return;
+      const k = el.dataset.k;
+      if (k === "van" || k === "tot"){
+        const n = parseFloat(String(el.value).replace(",", "."));
+        if (!isFinite(n)) return;
+        if (k === "van") p.van = Math.max(0, Math.min(n, p.duur - .5));
+        else p.tot = Math.max(.5, Math.min(n, p.duur));
+        if (p.tot <= p.van + .4) { if (k === "van") p.tot = Math.min(p.duur, p.van + 1); else p.van = Math.max(0, p.tot - 1); }
+        const len = document.getElementById(`len-${p.id}`); if (len) len.textContent = (p.tot - p.van).toLocaleString("nl-NL",{maximumFractionDigits:1}) + " s";
+        if (k === "van" && !opnemen){ clearTimeout(p.stilTimer); p.stilTimer = setTimeout(() => vernieuwStil(p).then(() => { if (!spelen) frame(t); }), 300); }
+        herbouw(); return;
+      }
+      p[k] = el.value; herbouw(); return;
+    }
     if (el.id === "f-titel"){ st.titel = el.value; herbouw(); }
     if (el.id === "f-vloer"){ st.vloer = el.value; herbouw(); }
     if (el.id === "f-plaats"){ st.plaats = el.value; herbouw(); }
