@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Filmpjesmaker PSG</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
 /* Layout: donkere kopbalk zoals de kantoortool; links stappen (foto's, sjabloon, tekst), rechts een staande telefoon-voorvertoning; op telefoon onder elkaar */
 :root{
@@ -208,11 +210,20 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
     ["detail","Detail","Langzaam inzoomen op nerf, patroon en afwerking"],
     ["tip","Tip van de vakman","Per foto een stap met tekst in beeld"]
   ];
-  const BAR = "#151C28", TEAL = "#3FB5A8";
+  // Huisstijl van de Instagram-carrousels: donker notenbruin, crème tekst, eikenkleurig accent, Lora + Inter
+  const BG = "#231B16", BG2 = "#2E241D", CREME = "#F3ECE2", ZACHT = "#BFAF9C", EIK = "#C8975F", EIK_LICHT = "#E3B887";
+  const KOP = "Lora,Georgia,serif", LETTER = "Inter,'Helvetica Neue',Arial,sans-serif";
+  const font = (gewicht, px, fam) => `${gewicht} ${px}px ${fam}`;
+  const spatie = px => { if ("letterSpacing" in ctx) ctx.letterSpacing = px + "px"; };
+  // Subtiele houtnerf, zoals op de carrousel-slides
+  const nerf = (() => { const c = document.createElement("canvas"); c.width = W; c.height = H; const g = c.getContext("2d");
+    g.fillStyle = "rgba(255,255,255,.035)"; for (let x = 0; x < W + 200; x += 49){ g.save(); g.translate(x, 0); g.rotate(-.035); g.fillRect(0, -50, 2.6, H + 100); g.restore(); }
+    return c; })();
+  function vlak(kleur){ ctx.fillStyle = kleur; ctx.fillRect(0,0,W,H); ctx.drawImage(nerf, 0, 0); }
 
   let uid = 0;
   const st = { fotos:[], sjabloon:"voorna", tempo:2.4, titel:"", vloer:"Eiken visgraat, geolied", plaats:"Gouda", demo:true, captionEigen:false };
-  let segs = [], totaal = 0, spelen = false, t = 0, last = 0, opnemen = false;
+  let segs = [], totaal = 0, spelen = false, t = 0, last = 0, opnemen = false, tNu = 0;
 
   /* ---------- Voorbeeldfoto's (getekend) ---------- */
   function rnd(seed){ return () => (seed = (seed * 16807) % 2147483647) / 2147483647; }
@@ -377,26 +388,32 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
     if (r) out.push(r); return out;
   }
   function chip(tekst, x, y){
-    ctx.font = "800 46px system-ui,-apple-system,'Segoe UI',sans-serif";
-    const w = ctx.measureText(tekst).width + 52;
-    ctx.fillStyle = "rgba(21,28,40,.82)"; ctx.beginPath(); ctx.roundRect(x, y, w, 84, 42); ctx.fill();
-    ctx.fillStyle = "#fff"; ctx.textBaseline = "middle"; ctx.textAlign = "left"; ctx.fillText(tekst, x+26, y+44);
+    ctx.font = font(600, 36, LETTER); spatie(6);
+    const w = ctx.measureText(tekst).width + 64;
+    ctx.fillStyle = "rgba(35,27,22,.84)"; ctx.beginPath(); ctx.roundRect(x, y, w, 80, 40); ctx.fill();
+    ctx.fillStyle = EIK_LICHT; ctx.textBaseline = "middle"; ctx.textAlign = "left"; ctx.fillText(tekst, x+32, y+42); spatie(0);
   }
+  // Kopregel zoals op de carrousel: merknaam en een dunne voortgangsbalk in eikenkleur
   function merk(){
-    ctx.font = "700 30px system-ui,-apple-system,'Segoe UI',sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.shadowColor = "rgba(0,0,0,.5)"; ctx.shadowBlur = 12; ctx.fillStyle = "rgba(255,255,255,.92)";
-    ctx.fillText("PARKET SPECIALIST GOUDA", W/2, 150); ctx.shadowBlur = 0;
+    const gt = ctx.createLinearGradient(0, 0, 0, 380); gt.addColorStop(0,"rgba(20,15,12,.55)"); gt.addColorStop(1,"rgba(20,15,12,0)");
+    ctx.fillStyle = gt; ctx.fillRect(0, 0, W, 380);
+    ctx.font = font(600, 28, LETTER); spatie(5); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.shadowColor = "rgba(20,15,12,.6)"; ctx.shadowBlur = 14; ctx.fillStyle = "rgba(243,236,226,.92)";
+    ctx.fillText("PARKET SPECIALIST GOUDA", W/2, 150); ctx.shadowBlur = 0; spatie(0);
+    const bx = 80, bw = W - 160, by = 186;
+    ctx.fillStyle = "rgba(243,236,226,.22)"; ctx.fillRect(bx, by, bw, 4);
+    ctx.fillStyle = EIK; ctx.fillRect(bx, by, bw * (totaal ? Math.min(1, tNu / totaal) : 0), 4);
   }
   function ondertekst(tekst, boven){
     if (!tekst && !boven) return;
-    const g = ctx.createLinearGradient(0, H-1100, 0, H); g.addColorStop(0,"rgba(0,0,0,0)"); g.addColorStop(1,"rgba(0,0,0,.72)");
-    ctx.fillStyle = g; ctx.fillRect(0, H-1100, W, 1100);
-    ctx.font = "700 66px system-ui,-apple-system,'Segoe UI',sans-serif";
-    const ls = tekst ? lijnen(tekst, W-260).slice(0,4) : [];
-    let y = H - 460 - (ls.length-1)*80;
-    ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; ctx.fillStyle = "#fff";
-    if (boven){ ctx.font = "800 40px system-ui,-apple-system,'Segoe UI',sans-serif"; ctx.fillStyle = TEAL; ctx.fillText(boven.toUpperCase(), 80, y - 96); ctx.font = "700 66px system-ui,-apple-system,'Segoe UI',sans-serif"; ctx.fillStyle = "#fff"; }
-    ls.forEach((l,i) => ctx.fillText(l, 80, y + i*80));
+    const g = ctx.createLinearGradient(0, H-1150, 0, H); g.addColorStop(0,"rgba(20,15,12,0)"); g.addColorStop(.45,"rgba(20,15,12,.78)"); g.addColorStop(1,"rgba(20,15,12,.92)");
+    ctx.fillStyle = g; ctx.fillRect(0, H-1150, W, 1150);
+    ctx.font = font(600, 68, KOP);
+    const ls = tekst ? lijnen(tekst, W-220).slice(0,4) : [];
+    let y = H - 460 - (ls.length-1)*82;
+    ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+    if (boven){ ctx.font = font(600, 34, LETTER); spatie(6); ctx.fillStyle = EIK_LICHT; ctx.fillText(boven.toUpperCase(), 80, y - (ls.length ? 100 : 0)); spatie(0); ctx.font = font(600, 68, KOP); }
+    ctx.fillStyle = CREME; ls.forEach((l,i) => ctx.fillText(l, 80, y + i*82));
   }
   function teken(seg, local){
     const p = Math.min(1, Math.max(0, local / seg.d));
@@ -410,43 +427,49 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
       const e = ease(p), x = W * (1 - e);
       cover(seg.b.src, 1.04);
       ctx.save(); ctx.beginPath(); ctx.rect(0,0,x,H); ctx.clip(); cover(seg.a.src, 1.08, .3, .1); ctx.restore();
-      ctx.fillStyle = "#fff"; ctx.fillRect(x-4, 0, 8, H);
-      ctx.beginPath(); ctx.arc(x, H/2, 46, 0, 7); ctx.fill();
-      ctx.fillStyle = BAR; ctx.font = "800 40px system-ui,sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("‹ ›", x, H/2+2);
+      ctx.fillStyle = CREME; ctx.fillRect(x-4, 0, 8, H);
+      ctx.beginPath(); ctx.arc(x, H/2, 48, 0, 7); ctx.fill();
+      ctx.strokeStyle = EIK; ctx.lineWidth = 5; ctx.stroke();
+      ctx.fillStyle = BG; ctx.font = font(700, 42, LETTER); ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("‹ ›", x, H/2+2);
       if (x > 380) chip("VOOR", 80, 230);
-      if (x < W - 300) chip("NA", W - 80 - 170, 230);
+      if (x < W - 300){ ctx.font = font(600, 36, LETTER); spatie(6); const nw = ctx.measureText("NA").width + 64; spatie(0); chip("NA", W - 80 - nw, 230); }
       merk();
     } else if (seg.k === "titel"){
       cover(seg.img.src, 1.1 - .05*p);
-      ctx.fillStyle = "rgba(15,20,28,.62)"; ctx.fillRect(0,0,W,H);
+      ctx.fillStyle = "rgba(35,27,22,.72)"; ctx.fillRect(0,0,W,H); ctx.drawImage(nerf, 0, 0);
       ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
-      ctx.font = "800 36px system-ui,-apple-system,'Segoe UI',sans-serif"; ctx.fillStyle = TEAL;
-      ctx.fillText((seg.klein || "Parket Specialist Gouda").toUpperCase(), W/2, H/2 - 170);
-      ctx.font = "800 96px system-ui,-apple-system,'Segoe UI',sans-serif"; ctx.fillStyle = "#fff";
-      const ls = lijnen(seg.tekst, W-200).slice(0,4), y0 = H/2 - 40 - (ls.length-1)*55 + (1-ease(Math.min(1,p*2.5)))*40;
+      ctx.font = font(600, 34, LETTER); spatie(7); ctx.fillStyle = EIK_LICHT;
+      ctx.fillText((seg.klein || "Parket Specialist Gouda").toUpperCase(), W/2, H/2 - 190); spatie(0);
+      ctx.font = font(700, 100, KOP); ctx.fillStyle = CREME;
+      const ls = lijnen(seg.tekst, W-180).slice(0,4), y0 = H/2 - 40 - (ls.length-1)*56 + (1-ease(Math.min(1,p*2.5)))*40;
       ls.forEach((l,i) => ctx.fillText(l, W/2, y0 + i*112));
-      ctx.fillStyle = TEAL; ctx.fillRect(W/2-60, y0 + (ls.length-1)*112 + 60, 120*Math.min(1,p*2), 8);
+      ctx.fillStyle = EIK; ctx.fillRect(W/2-60, y0 + (ls.length-1)*112 + 64, 120*Math.min(1,p*2), 6);
     } else if (seg.k === "eind"){
-      ctx.fillStyle = BAR; ctx.fillRect(0,0,W,H);
-      const a = ease(Math.min(1, p*2));
+      vlak(BG2);
+      const a = ease(Math.min(1, p*2)), y = H/2 - 120;
       ctx.globalAlpha = a; ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
-      ctx.font = "800 84px system-ui,-apple-system,'Segoe UI',sans-serif"; ctx.fillStyle = "#EAF1F0";
-      ctx.fillText("Parket Specialist", W/2, H/2 - 60); ctx.fillText("Gouda", W/2, H/2 + 40);
-      ctx.fillStyle = TEAL; ctx.fillRect(W/2-70, H/2 + 100, 140, 8);
-      ctx.font = "600 44px system-ui,-apple-system,'Segoe UI',sans-serif"; ctx.fillStyle = "#9AA6B5";
-      ctx.fillText("parketspecialistgouda.nl", W/2, H/2 + 200);
       const regel = [st.vloer.trim(), st.plaats.trim()].filter(Boolean).join(" · ");
-      if (regel){ ctx.font = "500 38px system-ui,-apple-system,'Segoe UI',sans-serif"; ctx.fillStyle = "#EAF1F0"; ctx.fillText(regel, W/2, H/2 + 280); }
+      if (regel){ ctx.font = font(600, 32, LETTER); spatie(5); ctx.fillStyle = EIK_LICHT; ctx.fillText(regel.toUpperCase(), W/2, y - 150); spatie(0); }
+      ctx.font = font(700, 92, KOP); ctx.fillStyle = CREME;
+      ctx.fillText("Parket Specialist", W/2, y); ctx.fillText("Gouda", W/2, y + 104);
+      ctx.fillStyle = EIK; ctx.fillRect(W/2-60, y + 160, 120, 6);
+      ctx.font = font(500, 40, LETTER); ctx.fillStyle = ZACHT;
+      ctx.fillText("Kom langs in onze showroom in Gouda", W/2, y + 260);
+      ctx.font = font(600, 36, LETTER); const kt = "Vraag vrijblijvend advies", kw = ctx.measureText(kt).width + 96;
+      ctx.fillStyle = EIK; ctx.beginPath(); ctx.roundRect(W/2 - kw/2, y + 320, kw, 96, 48); ctx.fill();
+      ctx.fillStyle = "#1E1712"; ctx.textBaseline = "middle"; ctx.fillText(kt, W/2, y + 370);
+      ctx.textBaseline = "alphabetic"; ctx.font = font(500, 36, LETTER); ctx.fillStyle = ZACHT; spatie(1);
+      ctx.fillText("parketspecialistgouda.nl", W/2, y + 520); spatie(0);
       ctx.globalAlpha = 1;
     }
   }
   function frame(tt){
     ctx.setTransform(1,0,0,1,0,0); ctx.globalAlpha = 1; ctx.fillStyle = "#000"; ctx.fillRect(0,0,W,H);
     if (!segs.length){
-      ctx.fillStyle = BAR; ctx.fillRect(0,0,W,H); ctx.fillStyle = "#9AA6B5"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.font = "600 52px system-ui,sans-serif"; ctx.fillText("Kies foto's om te beginnen", W/2, H/2); return;
+      vlak(BG); ctx.fillStyle = ZACHT; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.font = font(600, 56, KOP); ctx.fillText("Kies foto's om te beginnen", W/2, H/2); return;
     }
-    tt = Math.min(tt, totaal - 1e-3);
+    tt = Math.min(tt, totaal - 1e-3); tNu = tt;
     let i = segs.findIndex(s => tt < s.start + s.d); if (i < 0) i = segs.length - 1;
     const s = segs[i], local = tt - s.start;
     syncVideos(s, local, segs[i+1]);
@@ -553,14 +576,22 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
     else kop = `Tip van de vakman: ${titel || "zo houd je je houten vloer mooi"}.`;
     let tekst = (titel && st.sjabloon !== "tip" ? titel + "\n\n" : "") + kop;
     if (st.sjabloon === "tip" && tips.length) tekst += "\n\n" + tips.map((x,i)=>`${i+1}. ${x}`).join("\n");
-    tekst += "\n\nBenieuwd wat er bij jou mogelijk is? Kom langs in onze showroom of stuur ons een bericht.\nparketspecialistgouda.nl";
-    const tags = ["#parket","#parketvloer","#houtenvloer","#eikenvloer","#interieur","#vakmanschap","#parketspecialistgouda"];
-    const l = (vloer + " " + titel).toLowerCase();
-    if (l.includes("visgraat")) tags.splice(2,0,"#visgraat");
-    if (l.includes("hongaar")) tags.splice(2,0,"#hongaarsepunt");
-    if (st.sjabloon === "voorna") tags.push("#voorenna");
-    if (plaats) tags.push("#" + plaats.toLowerCase().replace(/[^a-z0-9à-ÿ]/g,""));
-    return tekst + "\n\n" + [...new Set(tags)].join(" ");
+    tekst += "\n\nKom langs in onze showroom in Gouda en zie en voel het hout in het echt. Of vraag vrijblijvend advies aan via DM of parketspecialistgouda.nl.";
+    // Hashtags volgens de skill parket-instagram: vaste set, regio, onderwerp (8-15 stuks)
+    const tags = ["#parketspecialistgouda","#gouda","#parket","#houtenvloer"];
+    const pl = plaats.toLowerCase().replace(/[^a-z0-9à-ÿ]/g,"");
+    if (!pl || pl === "gouda") tags.push("#goudastad","#groenehart");
+    else tags.push("#" + pl, "#groenehart");
+    const l = (vloer + " " + titel + " " + tips.join(" ")).toLowerCase();
+    if (l.includes("visgraat")) tags.push("#visgraatvloer");
+    if (l.includes("hongaar")) tags.push("#hongaarsepunt");
+    if (l.includes("eiken")) tags.push("#eikenvloer");
+    if (l.includes("olie") || l.includes("geolied")) tags.push("#geoliedevloer");
+    if (l.includes("schuur") || l.includes("geschuurd")) tags.push("#vloerschuren");
+    if (l.includes("vloerverwarming")) tags.push("#vloerverwarming");
+    if (st.sjabloon === "voorna" || st.sjabloon === "ruwaf") tags.push("#vloerrenovatie");
+    tags.push("#parketvloer","#vakmanschap","#interieur","#interieurinspiratie");
+    return tekst + "\n\n" + [...new Set(tags)].slice(0,15).join(" ");
   }
   function updateCaption(force){ if (force || !st.captionEigen){ $("#caption").value = maakCaption(); if (force) st.captionEigen = false; } }
   $("#caption").addEventListener("input", () => { st.captionEigen = true; });
@@ -646,6 +677,8 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
   /* ---------- Start ---------- */
   st.fotos = demoFotos(); st.titel = "Van versleten naar visgraat";
   vulTekst(); alles(); t = 1.2; frame(t); toonTijd();
+  // Lora en Inter laden; daarna opnieuw tekenen (zonder internet valt hij terug op Georgia/Arial)
+  if (document.fonts) Promise.all([font(700,100,KOP), font(600,68,KOP), font(600,36,LETTER), font(500,40,LETTER)].map(f => document.fonts.load(f).catch(()=>{}))).then(() => { if (!spelen) frame(t); });
 })();
 </script>
 </body>
