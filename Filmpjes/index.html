@@ -1,0 +1,556 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Filmpjesmaker PSG</title>
+<style>
+/* Layout: donkere kopbalk zoals de kantoortool; links stappen (foto's, sjabloon, tekst), rechts een staande telefoon-voorvertoning; op telefoon onder elkaar */
+:root{
+  --paper:#F3F5F7; --card:#FFFFFF; --line:#E7EBEF; --ink:#1E2530; --muted:#6B7584; --soft:#F2F5F7;
+  --accent:#0F766E; --accent-dark:#0B564F; --accent-tint:#E3F4F1; --accent-ink:#FFFFFF;
+  --bar:#151C28; --bar-ink:#EAF1F0; --bar-muted:#9AA6B5;
+  --warn:#9A6408; --warn-bg:#FBF1DC; --bad:#C23B3B;
+  --shadow:0 1px 6px rgba(21,28,40,.05);
+  --f-ui:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --paper:#11161E; --card:#19202B; --line:#28313E; --ink:#E6EBF1; --muted:#97A2B1; --soft:#1E2631;
+  --accent:#3FB5A8; --accent-dark:#7FD3C8; --accent-tint:#173430; --accent-ink:#0A1F1C;
+  --bar:#0A0F16; --bar-ink:#EAF1F0; --bar-muted:#8793A3;
+  --warn:#E6B85C; --warn-bg:#2E2617; --bad:#EE7E70;
+  --shadow:0 1px 6px rgba(0,0,0,.25); color-scheme:dark }}
+:root[data-theme="dark"]{
+  --paper:#11161E; --card:#19202B; --line:#28313E; --ink:#E6EBF1; --muted:#97A2B1; --soft:#1E2631;
+  --accent:#3FB5A8; --accent-dark:#7FD3C8; --accent-tint:#173430; --accent-ink:#0A1F1C;
+  --bar:#0A0F16; --bar-ink:#EAF1F0; --bar-muted:#8793A3;
+  --warn:#E6B85C; --warn-bg:#2E2617; --bad:#EE7E70;
+  --shadow:0 1px 6px rgba(0,0,0,.25); color-scheme:dark }
+
+*{box-sizing:border-box}
+html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--f-ui);font-size:15px;line-height:1.45}
+[hidden]{display:none!important}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.band{background:var(--bar);color:var(--bar-ink);border-radius:0 0 18px 18px;box-shadow:0 6px 18px rgba(21,28,40,.2)}
+.in{max-width:1100px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.band .in{padding-block:18px;display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px}
+.brand{margin-right:auto;min-width:0}
+.brand h1{margin:0;font-size:19px;font-weight:700}
+.brand p{margin:2px 0 0;font-size:13px;color:var(--bar-muted)}
+.bar-btn{border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:var(--bar-ink);border-radius:9px;padding:7px 12px;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none}
+.bar-btn:hover{background:rgba(255,255,255,.16)}
+
+.main{padding-block:20px 40px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;align-items:start}
+.col{display:flex;flex-direction:column;gap:14px;min-width:0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.label{font-size:11px;font-weight:700;color:var(--accent-dark);text-transform:uppercase;letter-spacing:.05em;margin:0}
+.kop{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.hint{font-size:12.5px;color:var(--muted);margin:0}
+
+input[type=text],input:not([type]),select,textarea{width:100%;border:1px solid var(--line);border-radius:8px;background:var(--card);padding:8px 10px;min-width:0}
+input[type=text],input:not([type]),select{height:38px}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-tint);outline:none}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field>span{font-size:12px;color:var(--muted)}
+.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+
+.btn{border:1px solid var(--line);background:var(--card);border-radius:9px;padding:9px 14px;font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;gap:6px;text-decoration:none;color:var(--ink)}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{background:var(--accent-dark);border-color:var(--accent-dark)}
+.btn:disabled{opacity:.5;cursor:default}
+.btn.full{width:100%;height:46px;font-size:15px}
+.filebtn{position:relative}
+.filebtn input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+
+/* Foto's */
+.fotos{display:flex;flex-direction:column;gap:8px}
+.foto{display:grid;grid-template-columns:56px minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px;border:1px solid var(--line);border-radius:12px;background:var(--soft)}
+.foto img,.foto canvas{width:56px;height:76px;object-fit:cover;border-radius:7px;display:block;background:var(--line)}
+.foto .mid{display:grid;grid-template-columns:110px minmax(0,1fr);gap:8px;min-width:0}
+.foto .acts{display:flex;gap:2px}
+.icon-btn{border:0;background:transparent;color:var(--muted);width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:16px;line-height:1}
+.icon-btn:hover{background:var(--card);color:var(--ink)}
+.icon-btn.del:hover{color:var(--bad)}
+.icon-btn:disabled{opacity:.3;cursor:default}
+.leeg{border:2px dashed var(--line);border-radius:12px;padding:22px;text-align:center;color:var(--muted)}
+
+/* Sjablonen */
+.sjablonen{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.sjabloon{border:1.5px solid var(--line);background:var(--card);border-radius:12px;padding:12px;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:3px}
+.sjabloon b{font-size:14px}
+.sjabloon span{font-size:12.5px;color:var(--muted)}
+.sjabloon:hover{border-color:var(--accent)}
+.sjabloon[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-tint)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.seg button{border:0;background:var(--card);padding:7px 12px;font-size:13px;cursor:pointer;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);font-weight:600}
+
+/* Voorvertoning */
+.preview{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px)}
+.phone{background:#0B0F14;border-radius:22px;padding:8px;box-shadow:0 10px 30px rgba(0,0,0,.18)}
+.phone canvas,.phone video{display:block;width:100%;aspect-ratio:9/16;max-width:100%;border-radius:15px;background:#000}
+.ctrl{display:flex;align-items:center;gap:10px}
+.prog{flex:1;height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.prog i{display:block;height:100%;width:0;background:var(--accent)}
+.tijd{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.tag{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--warn);background:var(--warn-bg);border-radius:6px;padding:3px 8px;align-self:flex-start}
+.melding{font-size:13px;border-radius:8px;padding:9px 11px;background:var(--warn-bg);color:var(--warn)}
+.ok{font-size:13px;color:var(--accent);font-weight:600}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+@media (max-width:900px){ .grid{grid-template-columns:minmax(0,1fr)} .preview{position:static;max-width:380px;width:100%;margin:0 auto} }
+@media (max-width:520px){ .foto .mid{grid-template-columns:minmax(0,1fr)} .sjablonen{grid-template-columns:minmax(0,1fr)} }
+</style>
+</head>
+<body>
+
+<header class="band">
+  <div class="in">
+    <div class="brand">
+      <h1>Filmpjesmaker</h1>
+      <p>Parket Specialist Gouda · reels van je eigen foto's</p>
+    </div>
+    <a class="bar-btn" href="../">← Kantoor</a>
+  </div>
+</header>
+
+<main class="main">
+  <div class="in grid">
+    <div class="col">
+
+      <section class="card" aria-labelledby="l-fotos">
+        <div class="kop">
+          <p class="label" id="l-fotos">1 · Foto's</p>
+          <label class="btn primary filebtn">Foto's kiezen<input type="file" id="bestanden" accept="image/*" multiple></label>
+        </div>
+        <p class="hint" id="demo-hint">Er staan nu voorbeeldfoto's in. Kies je eigen foto's, dan verdwijnen ze.</p>
+        <div class="fotos" id="fotos"></div>
+        <p class="hint">Geef elke foto een label. Je foto's blijven op je eigen toestel en het filmpje bevat geen locatiegegevens.</p>
+      </section>
+
+      <section class="card" aria-labelledby="l-sjabloon">
+        <p class="label" id="l-sjabloon">2 · Sjabloon</p>
+        <div class="sjablonen" id="sjablonen" role="group" aria-label="Sjabloon"></div>
+        <div class="row">
+          <span class="hint">Tempo</span>
+          <div class="seg" id="tempo" role="group" aria-label="Tempo">
+            <button data-tempo="1.6">Snel</button><button data-tempo="2.4">Normaal</button><button data-tempo="3.4">Rustig</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="l-tekst">
+        <p class="label" id="l-tekst">3 · Tekst</p>
+        <label class="field" for="f-titel"><span id="titel-label">Titel aan het begin (leeg laten mag)</span><input type="text" id="f-titel" maxlength="60"></label>
+        <div class="fields">
+          <label class="field" for="f-vloer"><span>Vloer</span><input type="text" id="f-vloer" placeholder="Bijv. eiken visgraat, geolied" maxlength="60"></label>
+          <label class="field" for="f-plaats"><span>Plaats</span><input type="text" id="f-plaats" placeholder="Bijv. Gouda" maxlength="40"></label>
+        </div>
+        <div class="field">
+          <div class="kop"><span class="hint">Caption voor Instagram</span><button class="btn" id="kopieer" style="padding:5px 10px;font-size:13px">Kopieer</button></div>
+          <textarea id="caption" rows="7" aria-label="Caption"></textarea>
+          <div class="row"><button class="btn" id="caption-nieuw" style="padding:5px 10px;font-size:13px">Opnieuw opstellen</button><span class="ok" id="kopie-ok" hidden>Gekopieerd</span></div>
+        </div>
+      </section>
+    </div>
+
+    <aside class="col preview">
+      <section class="card">
+        <div class="kop"><p class="label">Voorvertoning</p><span class="tag" id="demo-tag">Voorbeeld</span></div>
+        <div class="phone">
+          <canvas id="cv" width="1080" height="1920" aria-label="Voorvertoning van het filmpje"></canvas>
+          <video id="resultaat" playsinline controls hidden></video>
+        </div>
+        <div class="ctrl">
+          <button class="icon-btn" id="speel" aria-label="Afspelen" style="font-size:18px">▶</button>
+          <div class="prog"><i id="balk"></i></div>
+          <span class="tijd" id="tijd">0,0 / 0,0 s</span>
+        </div>
+        <div id="opname-blok">
+          <button class="btn primary full" id="maak">Filmpje maken</button>
+          <p class="hint" style="margin-top:8px">Het maken duurt even lang als het filmpje. Houd dit scherm open.</p>
+        </div>
+        <div id="klaar-blok" hidden>
+          <div class="row">
+            <a class="btn primary" id="download" download="filmpje.mp4">Downloaden</a>
+            <button class="btn" id="deel" hidden>Opslaan in Foto's</button>
+            <button class="btn" id="opnieuw">Terug naar voorvertoning</button>
+          </div>
+        </div>
+        <div class="melding" id="melding" hidden></div>
+      </section>
+    </aside>
+  </div>
+</main>
+
+<script>
+(() => {
+  "use strict";
+  const W = 1080, H = 1920, FADE = 0.4;
+  const $ = s => document.querySelector(s);
+  const esc = s => String(s ?? "").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const cv = $("#cv"), ctx = cv.getContext("2d");
+  const LABELS = [["voor","Voor"],["tijdens","Tijdens"],["na","Na"],["detail","Detail"]];
+  const SJABLONEN = [
+    ["voorna","Voor en na","De oude vloer schuift weg, de nieuwe komt tevoorschijn"],
+    ["ruwaf","Van ruw naar af","Voor, tijdens en na achter elkaar"],
+    ["detail","Detail","Langzaam inzoomen op nerf, patroon en afwerking"],
+    ["tip","Tip van de vakman","Per foto een stap met tekst in beeld"]
+  ];
+  const BAR = "#151C28", TEAL = "#3FB5A8";
+
+  let uid = 0;
+  const st = { fotos:[], sjabloon:"voorna", tempo:2.4, titel:"", vloer:"Eiken visgraat, geolied", plaats:"Gouda", demo:true, captionEigen:false };
+  let segs = [], totaal = 0, spelen = false, t = 0, last = 0, opnemen = false;
+
+  /* ---------- Voorbeeldfoto's (getekend) ---------- */
+  function rnd(seed){ return () => (seed = (seed * 16807) % 2147483647) / 2147483647; }
+  function demo(soort){
+    const c = document.createElement("canvas"); c.width = 1200; c.height = 2133;
+    const g = c.getContext("2d"), r = rnd(soort === "voor" ? 7 : soort === "na" ? 13 : 29);
+    // muur
+    g.fillStyle = soort === "voor" ? "#cfc9bd" : "#ece8e1"; g.fillRect(0,0,c.width,c.height);
+    g.fillStyle = soort === "voor" ? "#bdb5a6" : "#f6f3ee"; g.fillRect(0,0,c.width,700);
+    g.fillStyle = soort === "voor" ? "#9a917f" : "#ffffff"; g.fillRect(0,690,c.width,40);
+    const vloerY = 730;
+    g.save(); g.beginPath(); g.rect(0,vloerY,c.width,c.height-vloerY); g.clip();
+    if (soort === "voor"){
+      for (let y = vloerY; y < c.height; y += 120){
+        let x = -r()*300;
+        while (x < c.width){
+          const w = 380 + r()*420, l = 42 + r()*14;
+          g.fillStyle = `hsl(32,${12+r()*8}%,${l}%)`; g.fillRect(x, y, w-4, 116);
+          g.strokeStyle = "rgba(60,50,40,.25)"; g.lineWidth = 2;
+          for (let k=0;k<4;k++){ g.beginPath(); const sy = y+10+r()*96; g.moveTo(x+r()*w*.3, sy); g.lineTo(x+w*(.5+r()*.5), sy+r()*20-10); g.stroke(); }
+          x += w;
+        }
+      }
+      g.fillStyle = "rgba(90,80,70,.18)";
+      for (let k=0;k<70;k++){ g.beginPath(); g.ellipse(r()*c.width, vloerY+r()*(c.height-vloerY), 20+r()*90, 6+r()*20, r()*3, 0, 7); g.fill(); }
+    } else {
+      g.translate(c.width/2, vloerY + 700); g.rotate(Math.PI/4);
+      const L = 360, B = 90;
+      for (let i=-14;i<14;i++) for (let j=-14;j<14;j++){
+        const x = i*L/2 + j*B, y = i*L/2 - j*B;
+        const half = soort === "tijdens" && (i + j*0.3) > 2;
+        const kleur = l => half ? `hsl(30,6%,${54+r()*6}%)` : `hsl(${30+r()*6},${38+r()*12}%,${l}%)`;
+        g.fillStyle = kleur(46+r()*14); g.fillRect(x, y, L, B);
+        g.fillStyle = kleur(44+r()*14); g.fillRect(x+L, y-L+B, B, L);
+        if (!half){ g.strokeStyle = "rgba(70,40,15,.18)"; g.lineWidth = 2;
+          for (let k=0;k<3;k++){ g.beginPath(); const yy = y+15+r()*60; g.moveTo(x+6,yy); g.bezierCurveTo(x+L*.3,yy+8,x+L*.6,yy-8,x+L-6,yy+4); g.stroke(); } }
+        g.strokeStyle = "rgba(40,25,10,.35)"; g.lineWidth = 2; g.strokeRect(x, y, L, B); g.strokeRect(x+L, y-L+B, B, L);
+      }
+      g.setTransform(1,0,0,1,0,0);
+      const lg = g.createLinearGradient(0,vloerY,0,c.height); lg.addColorStop(0,"rgba(255,255,255,.18)"); lg.addColorStop(1,"rgba(0,0,0,.12)");
+      g.fillStyle = lg; g.fillRect(0,vloerY,c.width,c.height);
+    }
+    g.restore();
+    if (soort !== "voor"){ g.fillStyle = "#ffffff"; g.fillRect(0, vloerY-6, c.width, 24); }
+    return c;
+  }
+  function demoFotos(){
+    return [["voor","Oude vloer: versleten en vol krassen"],["tijdens","Nieuwe visgraat wordt verlijmd"],["na","Eiken visgraat, geolied"]]
+      .map(([label,tekst]) => { const src = demo(label); return { id:++uid, src, thumb:src.toDataURL("image/jpeg",.6), label, tekst }; });
+  }
+
+  /* ---------- Foto's inladen ---------- */
+  async function laad(file){
+    const url = URL.createObjectURL(file);
+    try {
+      const img = new Image(); img.src = url; await img.decode();
+      const k = Math.min(1, 2400 / Math.max(img.naturalWidth, img.naturalHeight));
+      const c = document.createElement("canvas"); c.width = Math.round(img.naturalWidth*k); c.height = Math.round(img.naturalHeight*k);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      const tc = document.createElement("canvas"), tk = 160 / Math.max(c.width, c.height);
+      tc.width = Math.round(c.width*tk); tc.height = Math.round(c.height*tk); tc.getContext("2d").drawImage(c,0,0,tc.width,tc.height);
+      return { src:c, thumb:tc.toDataURL("image/jpeg",.7) };
+    } finally { URL.revokeObjectURL(url); }
+  }
+  $("#bestanden").addEventListener("change", async e => {
+    const files = [...e.target.files]; e.target.value = "";
+    if (!files.length) return;
+    if (st.demo){ st.fotos = []; st.demo = false; st.titel = ""; st.vloer = ""; st.plaats = ""; st.captionEigen = false; vulTekst(); }
+    melding("");
+    for (const f of files){
+      try { const p = await laad(f); const n = st.fotos.length;
+        const label = n === 0 ? "voor" : "na";
+        st.fotos.push({ id:++uid, ...p, label, tekst:"" });
+      } catch(_) { melding(`${f.name} kon niet worden geopend. Kies een JPG, PNG of HEIC-foto die je telefoon kan tonen.`); }
+    }
+    if (st.fotos.length > 2 && !st.fotos.some(p=>p.label==="tijdens")) st.fotos.forEach((p,i)=>{ if (i>0 && i<st.fotos.length-1) p.label = "tijdens"; });
+    alles();
+  });
+
+  /* ---------- Tijdlijn ---------- */
+  function bouw(){
+    const P = st.fotos, d = st.tempo, s = [];
+    if (!P.length){ segs = []; totaal = 0; return; }
+    const met = l => P.filter(p => p.label === l);
+    const titel = st.titel.trim();
+    if (st.sjabloon === "voorna"){
+      const v = met("voor")[0] || P[0], n = met("na")[0] || P[P.length-1];
+      if (titel) s.push({k:"titel", img:v, d:2.2, tekst:titel});
+      s.push({k:"foto", img:v, d, chip:"VOOR", tekst:v.tekst});
+      if (v !== n) s.push({k:"wipe", a:v, b:n, d:2.6, geenFade:true});
+      s.push({k:"foto", img:n, d:d+.4, chip:"NA", tekst:n.tekst, geenFade: v !== n});
+      P.filter(p => p !== v && p !== n && (p.label === "na" || p.label === "detail")).forEach(p => s.push({k:"foto", img:p, d, tekst:p.tekst}));
+    } else if (st.sjabloon === "ruwaf"){
+      if (titel) s.push({k:"titel", img:P[0], d:2.2, tekst:titel});
+      const orde = ["voor","tijdens","na","detail"];
+      [...P].sort((a,b)=>orde.indexOf(a.label)-orde.indexOf(b.label)).forEach(p => s.push({k:"foto", img:p, d, chip: p.label === "detail" ? "" : p.label.toUpperCase(), tekst:p.tekst}));
+    } else if (st.sjabloon === "detail"){
+      if (titel) s.push({k:"titel", img:P[0], d:2.2, tekst:titel});
+      P.forEach(p => s.push({k:"foto", img:p, d:d*1.5, zoom:.22, tekst:p.tekst}));
+    } else {
+      s.push({k:"titel", img:P[0], d:2.4, tekst: titel || "Tip van de vakman", klein:"Tip van de vakman"});
+      P.forEach((p,i) => s.push({k:"foto", img:p, d:d+.8, stap:`Stap ${i+1}`, tekst:p.tekst}));
+    }
+    s.push({k:"eind", d:2.8});
+    let a = 0; s.forEach((x,i) => { x.i = i; x.start = a; a += x.d; });
+    segs = s; totaal = a;
+  }
+
+  /* ---------- Tekenen ---------- */
+  const ease = x => x < .5 ? 2*x*x : 1 - Math.pow(-2*x+2, 2)/2;
+  function cover(src, scale=1, dx=0, dy=0){
+    const iw = src.width, ih = src.height, k = Math.max(W/iw, H/ih) * scale, w = iw*k, h = ih*k;
+    ctx.drawImage(src, (W-w)/2 + dx*(w-W)/2, (H-h)/2 + dy*(h-H)/2, w, h);
+  }
+  function lijnen(tekst, maxW){
+    const woorden = String(tekst).split(/\s+/).filter(Boolean), out = []; let r = "";
+    for (const w of woorden){ const p = r ? r + " " + w : w; if (ctx.measureText(p).width > maxW && r){ out.push(r); r = w; } else r = p; }
+    if (r) out.push(r); return out;
+  }
+  function chip(tekst, x, y){
+    ctx.font = "800 46px system-ui,-apple-system,'Segoe UI',sans-serif";
+    const w = ctx.measureText(tekst).width + 52;
+    ctx.fillStyle = "rgba(21,28,40,.82)"; ctx.beginPath(); ctx.roundRect(x, y, w, 84, 42); ctx.fill();
+    ctx.fillStyle = "#fff"; ctx.textBaseline = "middle"; ctx.textAlign = "left"; ctx.fillText(tekst, x+26, y+44);
+  }
+  function merk(){
+    ctx.font = "700 30px system-ui,-apple-system,'Segoe UI',sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.shadowColor = "rgba(0,0,0,.5)"; ctx.shadowBlur = 12; ctx.fillStyle = "rgba(255,255,255,.92)";
+    ctx.fillText("PARKET SPECIALIST GOUDA", W/2, 150); ctx.shadowBlur = 0;
+  }
+  function ondertekst(tekst, boven){
+    if (!tekst && !boven) return;
+    const g = ctx.createLinearGradient(0, H-1100, 0, H); g.addColorStop(0,"rgba(0,0,0,0)"); g.addColorStop(1,"rgba(0,0,0,.72)");
+    ctx.fillStyle = g; ctx.fillRect(0, H-1100, W, 1100);
+    ctx.font = "700 66px system-ui,-apple-system,'Segoe UI',sans-serif";
+    const ls = tekst ? lijnen(tekst, W-260).slice(0,4) : [];
+    let y = H - 460 - (ls.length-1)*80;
+    ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; ctx.fillStyle = "#fff";
+    if (boven){ ctx.font = "800 40px system-ui,-apple-system,'Segoe UI',sans-serif"; ctx.fillStyle = TEAL; ctx.fillText(boven.toUpperCase(), 80, y - 96); ctx.font = "700 66px system-ui,-apple-system,'Segoe UI',sans-serif"; ctx.fillStyle = "#fff"; }
+    ls.forEach((l,i) => ctx.fillText(l, 80, y + i*80));
+  }
+  function teken(seg, local){
+    const p = Math.min(1, Math.max(0, local / seg.d));
+    if (seg.k === "foto"){
+      const z = seg.zoom ?? .08, dir = seg.i % 2 ? 1 : -1;
+      cover(seg.img.src, 1 + z*ease(p), dir*(.6*p - .3), -.2 + .3*p);
+      if (seg.chip) chip(seg.chip, 80, 230);
+      ondertekst(seg.tekst, seg.stap);
+      merk();
+    } else if (seg.k === "wipe"){
+      const e = ease(p), x = W * (1 - e);
+      cover(seg.b.src, 1.04);
+      ctx.save(); ctx.beginPath(); ctx.rect(0,0,x,H); ctx.clip(); cover(seg.a.src, 1.08, .3, .1); ctx.restore();
+      ctx.fillStyle = "#fff"; ctx.fillRect(x-4, 0, 8, H);
+      ctx.beginPath(); ctx.arc(x, H/2, 46, 0, 7); ctx.fill();
+      ctx.fillStyle = BAR; ctx.font = "800 40px system-ui,sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("‹ ›", x, H/2+2);
+      if (x > 380) chip("VOOR", 80, 230);
+      if (x < W - 300) chip("NA", W - 80 - 170, 230);
+      merk();
+    } else if (seg.k === "titel"){
+      cover(seg.img.src, 1.1 - .05*p);
+      ctx.fillStyle = "rgba(15,20,28,.62)"; ctx.fillRect(0,0,W,H);
+      ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+      ctx.font = "800 36px system-ui,-apple-system,'Segoe UI',sans-serif"; ctx.fillStyle = TEAL;
+      ctx.fillText((seg.klein || "Parket Specialist Gouda").toUpperCase(), W/2, H/2 - 170);
+      ctx.font = "800 96px system-ui,-apple-system,'Segoe UI',sans-serif"; ctx.fillStyle = "#fff";
+      const ls = lijnen(seg.tekst, W-200).slice(0,4), y0 = H/2 - 40 - (ls.length-1)*55 + (1-ease(Math.min(1,p*2.5)))*40;
+      ls.forEach((l,i) => ctx.fillText(l, W/2, y0 + i*112));
+      ctx.fillStyle = TEAL; ctx.fillRect(W/2-60, y0 + (ls.length-1)*112 + 60, 120*Math.min(1,p*2), 8);
+    } else if (seg.k === "eind"){
+      ctx.fillStyle = BAR; ctx.fillRect(0,0,W,H);
+      const a = ease(Math.min(1, p*2));
+      ctx.globalAlpha = a; ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+      ctx.font = "800 84px system-ui,-apple-system,'Segoe UI',sans-serif"; ctx.fillStyle = "#EAF1F0";
+      ctx.fillText("Parket Specialist", W/2, H/2 - 60); ctx.fillText("Gouda", W/2, H/2 + 40);
+      ctx.fillStyle = TEAL; ctx.fillRect(W/2-70, H/2 + 100, 140, 8);
+      ctx.font = "600 44px system-ui,-apple-system,'Segoe UI',sans-serif"; ctx.fillStyle = "#9AA6B5";
+      ctx.fillText("parketspecialistgouda.nl", W/2, H/2 + 200);
+      const regel = [st.vloer.trim(), st.plaats.trim()].filter(Boolean).join(" · ");
+      if (regel){ ctx.font = "500 38px system-ui,-apple-system,'Segoe UI',sans-serif"; ctx.fillStyle = "#EAF1F0"; ctx.fillText(regel, W/2, H/2 + 280); }
+      ctx.globalAlpha = 1;
+    }
+  }
+  function frame(tt){
+    ctx.setTransform(1,0,0,1,0,0); ctx.globalAlpha = 1; ctx.fillStyle = "#000"; ctx.fillRect(0,0,W,H);
+    if (!segs.length){
+      ctx.fillStyle = BAR; ctx.fillRect(0,0,W,H); ctx.fillStyle = "#9AA6B5"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.font = "600 52px system-ui,sans-serif"; ctx.fillText("Kies foto's om te beginnen", W/2, H/2); return;
+    }
+    tt = Math.min(tt, totaal - 1e-3);
+    let i = segs.findIndex(s => tt < s.start + s.d); if (i < 0) i = segs.length - 1;
+    const s = segs[i], local = tt - s.start;
+    if (i > 0 && local < FADE && !s.geenFade){
+      const v = segs[i-1]; teken(v, v.d); ctx.globalAlpha = local / FADE; teken(s, local); ctx.globalAlpha = 1;
+    } else teken(s, local);
+  }
+
+  /* ---------- Afspelen ---------- */
+  const fmt = n => n.toLocaleString("nl-NL",{minimumFractionDigits:1,maximumFractionDigits:1});
+  function toonTijd(){ $("#tijd").textContent = `${fmt(t)} / ${fmt(totaal)} s`; $("#balk").style.width = totaal ? (t/totaal*100) + "%" : "0"; }
+  function lus(now){
+    if (!spelen) return;
+    const dt = Math.min(.1, (now - last)/1000); last = now;
+    t += dt;
+    if (opnemen){ if (t >= totaal){ t = totaal; frame(t); toonTijd(); stopOpname(); return; } }
+    else if (t >= totaal) t = 0;
+    frame(t); toonTijd(); requestAnimationFrame(lus);
+  }
+  function speel(aan){
+    spelen = aan; $("#speel").textContent = aan ? "❚❚" : "▶"; $("#speel").setAttribute("aria-label", aan ? "Pauzeren" : "Afspelen");
+    if (aan){ last = performance.now(); requestAnimationFrame(lus); }
+  }
+  $("#speel").onclick = () => { if (!opnemen) speel(!spelen); };
+
+  /* ---------- Opnemen ---------- */
+  let rec = null, chunks = [], mime = "", resultaatUrl = "";
+  function kiesMime(){
+    if (!window.MediaRecorder) return "";
+    return ["video/mp4;codecs=avc1.42E01E","video/mp4;codecs=avc1","video/mp4","video/webm;codecs=vp9","video/webm;codecs=vp8","video/webm"].find(m => { try { return MediaRecorder.isTypeSupported(m); } catch(_) { return false; } }) || "";
+  }
+  $("#maak").onclick = () => {
+    melding("");
+    if (!segs.length){ melding("Kies eerst een of meer foto's."); return; }
+    mime = kiesMime();
+    if (!mime || !cv.captureStream){ melding("Deze browser kan geen filmpje maken. Gebruik Safari op je iPhone of een recente versie van Chrome."); return; }
+    const stream = cv.captureStream(30);
+    try { rec = new MediaRecorder(stream, { mimeType:mime, videoBitsPerSecond:8000000 }); }
+    catch(_) { melding("Het opnemen kon niet starten in deze browser. Probeer Safari of Chrome."); return; }
+    chunks = [];
+    rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+    rec.onstop = klaar;
+    opnemen = true; t = 0; frame(0);
+    $("#maak").disabled = true; $("#maak").textContent = "Bezig met maken…";
+    rec.start(250); speel(true);
+  };
+  function stopOpname(){ spelen = false; setTimeout(() => { try { rec.stop(); } catch(_) {} }, 150); }
+  function klaar(){
+    opnemen = false; speel(false);
+    $("#maak").disabled = false; $("#maak").textContent = "Filmpje maken";
+    const type = mime.split(";")[0], ext = type === "video/mp4" ? "mp4" : "webm";
+    const blob = new Blob(chunks, { type });
+    if (!blob.size){ melding("Er is geen filmpje opgenomen. Probeer het opnieuw en houd het scherm open."); return; }
+    if (resultaatUrl) URL.revokeObjectURL(resultaatUrl);
+    resultaatUrl = URL.createObjectURL(blob);
+    const naam = `psg-${st.sjabloon}-${new Date().toISOString().slice(0,10)}.${ext}`;
+    const v = $("#resultaat"); v.src = resultaatUrl; v.hidden = false; cv.hidden = true;
+    const a = $("#download"); a.href = resultaatUrl; a.download = naam;
+    const file = new File([blob], naam, { type });
+    const deel = $("#deel");
+    deel.hidden = !(navigator.canShare && navigator.canShare({ files:[file] }));
+    deel.onclick = () => navigator.share({ files:[file] }).catch(()=>{});
+    $("#opname-blok").hidden = true; $("#klaar-blok").hidden = false;
+    if (ext === "webm") melding("Deze browser maakt een .webm-filmpje. Instagram werkt het best met .mp4: maak het filmpje dan in Safari of een recente Chrome.");
+  }
+  $("#opnieuw").onclick = () => {
+    $("#resultaat").pause(); $("#resultaat").hidden = true; cv.hidden = false;
+    $("#opname-blok").hidden = false; $("#klaar-blok").hidden = true; melding(""); t = 0; frame(0); toonTijd();
+  };
+  function melding(m){ $("#melding").textContent = m; $("#melding").hidden = !m; }
+
+  /* ---------- Caption ---------- */
+  function maakCaption(){
+    const vloer = st.vloer.trim(), plaats = st.plaats.trim(), titel = st.titel.trim();
+    const waar = plaats ? ` in ${plaats}` : "", wat = vloer ? vloer.charAt(0).toLowerCase() + vloer.slice(1) : "een nieuwe houten vloer";
+    const tips = st.fotos.map(p => p.tekst.trim()).filter(Boolean);
+    let kop;
+    if (st.sjabloon === "voorna") kop = `Voor en na${waar}: ${wat}. Wat een verschil!`;
+    else if (st.sjabloon === "ruwaf") kop = `Van oude vloer naar ${wat}${waar}. Zo ging het, stap voor stap.`;
+    else if (st.sjabloon === "detail") kop = `Het zit in de details: ${wat}${waar}.`;
+    else kop = `Tip van de vakman: ${titel || "zo houd je je houten vloer mooi"}.`;
+    let tekst = (titel && st.sjabloon !== "tip" ? titel + "\n\n" : "") + kop;
+    if (st.sjabloon === "tip" && tips.length) tekst += "\n\n" + tips.map((x,i)=>`${i+1}. ${x}`).join("\n");
+    tekst += "\n\nBenieuwd wat er bij jou mogelijk is? Kom langs in onze showroom of stuur ons een bericht.\nparketspecialistgouda.nl";
+    const tags = ["#parket","#parketvloer","#houtenvloer","#eikenvloer","#interieur","#vakmanschap","#parketspecialistgouda"];
+    const l = (vloer + " " + titel).toLowerCase();
+    if (l.includes("visgraat")) tags.splice(2,0,"#visgraat");
+    if (l.includes("hongaar")) tags.splice(2,0,"#hongaarsepunt");
+    if (st.sjabloon === "voorna") tags.push("#voorenna");
+    if (plaats) tags.push("#" + plaats.toLowerCase().replace(/[^a-z0-9à-ÿ]/g,""));
+    return tekst + "\n\n" + [...new Set(tags)].join(" ");
+  }
+  function updateCaption(force){ if (force || !st.captionEigen){ $("#caption").value = maakCaption(); if (force) st.captionEigen = false; } }
+  $("#caption").addEventListener("input", () => { st.captionEigen = true; });
+  $("#caption-nieuw").onclick = () => updateCaption(true);
+  $("#kopieer").onclick = () => {
+    const ta = $("#caption"), ok = () => { $("#kopie-ok").hidden = false; setTimeout(()=>$("#kopie-ok").hidden = true, 1800); };
+    try { navigator.clipboard.writeText(ta.value).then(ok, () => { ta.select(); }); } catch(_) { ta.select(); }
+  };
+
+  /* ---------- Invoer tonen ---------- */
+  function renderFotos(){
+    const el = $("#fotos");
+    if (!st.fotos.length){ el.innerHTML = `<div class="leeg">Nog geen foto's. Kies ze van je telefoon of computer.</div>`; return; }
+    el.innerHTML = st.fotos.map((p,i) => `<div class="foto" data-id="${p.id}">
+      <img src="${p.thumb}" alt="">
+      <div class="mid">
+        <select id="lab-${p.id}" data-k="label" aria-label="Label">${LABELS.map(([k,t])=>`<option value="${k}" ${p.label===k?"selected":""}>${t}</option>`).join("")}</select>
+        <input type="text" id="tek-${p.id}" data-k="tekst" maxlength="80" placeholder="Tekst in beeld (mag leeg)" value="${esc(p.tekst)}" aria-label="Tekst in beeld">
+      </div>
+      <div class="acts">
+        <button class="icon-btn" data-op="${p.id}" aria-label="Omhoog" ${i===0?"disabled":""}>↑</button>
+        <button class="icon-btn" data-neer="${p.id}" aria-label="Omlaag" ${i===st.fotos.length-1?"disabled":""}>↓</button>
+        <button class="icon-btn del" data-weg="${p.id}" aria-label="Verwijderen">×</button>
+      </div></div>`).join("");
+  }
+  function renderSjablonen(){
+    $("#sjablonen").innerHTML = SJABLONEN.map(([k,t,u]) => `<button class="sjabloon" data-sj="${k}" aria-pressed="${st.sjabloon===k}"><b>${t}</b><span>${u}</span></button>`).join("");
+    document.querySelectorAll("#tempo button").forEach(b => b.setAttribute("aria-pressed", +b.dataset.tempo === st.tempo));
+    $("#titel-label").textContent = st.sjabloon === "tip" ? "Titel van de tip" : "Titel aan het begin (leeg laten mag)";
+    $("#f-titel").placeholder = st.sjabloon === "tip" ? "Bijv. Zo onderhoud je een geoliede vloer" : "Bijv. Van versleten naar visgraat";
+  }
+  function vulTekst(){ $("#f-titel").value = st.titel; $("#f-vloer").value = st.vloer; $("#f-plaats").value = st.plaats; }
+  function herbouw(){ bouw(); if (t > totaal) t = 0; if (!spelen) frame(t); toonTijd(); updateCaption(); }
+  function alles(){
+    $("#demo-hint").hidden = !st.demo; $("#demo-tag").hidden = !st.demo;
+    renderFotos(); renderSjablonen(); herbouw();
+  }
+
+  document.addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b || opnemen) return;
+    const zoek = id => st.fotos.findIndex(p => p.id === +id);
+    if (b.dataset.sj){ st.sjabloon = b.dataset.sj; t = 0; alles(); return; }
+    if (b.dataset.tempo){ st.tempo = +b.dataset.tempo; renderSjablonen(); herbouw(); return; }
+    if (b.dataset.op){ const i = zoek(b.dataset.op); if (i>0){ [st.fotos[i-1],st.fotos[i]] = [st.fotos[i],st.fotos[i-1]]; alles(); } return; }
+    if (b.dataset.neer){ const i = zoek(b.dataset.neer); if (i<st.fotos.length-1){ [st.fotos[i+1],st.fotos[i]] = [st.fotos[i],st.fotos[i+1]]; alles(); } return; }
+    if (b.dataset.weg){ st.fotos.splice(zoek(b.dataset.weg),1); t = 0; alles(); return; }
+  });
+  document.addEventListener("input", e => {
+    const el = e.target, rij = el.closest(".foto");
+    if (rij){ const p = st.fotos.find(x => x.id === +rij.dataset.id); if (p){ p[el.dataset.k] = el.value; herbouw(); } return; }
+    if (el.id === "f-titel"){ st.titel = el.value; herbouw(); }
+    if (el.id === "f-vloer"){ st.vloer = el.value; herbouw(); }
+    if (el.id === "f-plaats"){ st.plaats = el.value; herbouw(); }
+  });
+  document.addEventListener("change", e => {
+    const el = e.target, rij = el.closest(".foto");
+    if (rij && el.dataset.k === "label"){ const p = st.fotos.find(x => x.id === +rij.dataset.id); if (p){ p.label = el.value; herbouw(); } }
+  });
+
+  /* ---------- Start ---------- */
+  st.fotos = demoFotos(); st.titel = "Van versleten naar visgraat";
+  vulTekst(); alles(); t = 1.2; frame(t); toonTijd();
+})();
+</script>
+</body>
+</html>
